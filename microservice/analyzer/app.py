@@ -106,7 +106,7 @@ def get_aircraft_location_reading(index):
                         except json.JSONDecodeError as e:
                             logger.error(f"Error decoding message: {str(e)}")
                             continue
-                    break  # If we get here without finding the index, break the retry loop
+                    break  
                     
                 except Exception as e:
                     logger.error(f"Error reading messages (attempt {retry_count + 1}): {str(e)}")
@@ -154,7 +154,7 @@ def get_aircraft_time_until_arrival_reading(index):
                         except json.JSONDecodeError as e:
                             logger.error(f"Error decoding message: {str(e)}")
                             continue
-                    break  # If we get here without finding the index, break the retry loop
+                    break  
                     
                 except Exception as e:
                     logger.error(f"Error reading messages (attempt {retry_count + 1}): {str(e)}")
