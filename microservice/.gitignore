@@ -5,4 +5,3 @@ dashboard-ui/node_modules/
 storage/create_tables_mysql.py
 storage/drop_tables_mysql.py
 storage/app_conf.yml
-deployment/docker-compose.yml
