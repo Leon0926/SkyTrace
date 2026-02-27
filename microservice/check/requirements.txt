@@ -6,4 +6,4 @@ Flask==3.0.3
 connexion[Flask]
 connexion[uvicorn]
 APScheduler==3.10.4
-PyYAML==6.0
+PyYAML==6.0.1

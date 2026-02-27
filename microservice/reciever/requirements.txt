@@ -5,3 +5,4 @@ pykafka==2.8.0
 Flask==3.0.3
 connexion[Flask]
 connexion[uvicorn]
+setuptools==79.0.1

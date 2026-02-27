@@ -4,6 +4,6 @@ eventstore1:
 eventstore2:
   url: http://localhost:8090/readings/time-until-arrival
 events:
-   hostname: lab6kafka.canadacentral.cloudapp.azure.com
+   hostname: localhost
    port: 9092
    topic: events
