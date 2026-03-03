@@ -4,4 +4,4 @@ datastore:
 scheduler:
   period_sec: 10
 eventstore:
-  url: http://lab6kafka.canadacentral.cloudapp.azure.com/storage
+  url: http://localhost:8090/storage

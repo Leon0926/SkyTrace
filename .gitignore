@@ -1,9 +1,11 @@
 .env
-pass.txt
 venv
 dashboard-ui/node_modules/
-storage/create_tables_mysql.py
-storage/drop_tables_mysql.py
-storage/app_conf.yml
 deployment/zookeeper/
 deployment/kafka/
+**/__pycache__/
+*.pyc
+.DS_Store
+*.log
+data.json
+logs/

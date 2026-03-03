@@ -9,6 +9,7 @@ import requests
 import swagger_ui_bundle
 import os
 from connexion import FlaskApp
+from flask_cors import CORS
 from connexion.middleware import MiddlewarePosition
 from starlette.middleware.cors import CORSMiddleware
 

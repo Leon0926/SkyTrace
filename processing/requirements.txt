@@ -6,3 +6,4 @@ Flask==3.0.3
 connexion[Flask]
 connexion[uvicorn]
 APScheduler==3.10.4
+flask_cors==6.0.2

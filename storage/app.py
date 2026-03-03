@@ -152,8 +152,8 @@ def process_messages():
         msg = json.loads(msg_str)
         logger.info("Message: %s" % msg)
         payload = msg["payload"]
-        if msg["type"] == "location_reading": # Change this to your event type
-            # Store the event1 (i.e., the payload) to the DB
+        if msg["type"] == "location_reading": 
+            # Store the event1 (i.e. the payload) to the DB
             session = Session()
             new_location_event = AircraftLocation(
                 flight_id=payload["flight_id"],
@@ -168,7 +168,7 @@ def process_messages():
             logger.info(f'Stored event {msg["type"]} request with a trace id of {payload["trace_id"]}')
             session.close()
 
-        elif msg["type"] == "time_until_arrival_reading": # Change this to your event type
+        elif msg["type"] == "time_until_arrival_reading": 
             # Store the event2 (i.e., the payload) to the DB
             session = Session()
             new_arrival_event = ArrivalTime(
