@@ -4,6 +4,6 @@ datastore:
 eventstore:
   url: http://localhost:8110
 events:
-   hostname: lab6kafka.canadacentral.cloudapp.azure.com
+   hostname: localhost
    port: 9092
    topic: events

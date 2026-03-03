@@ -9,6 +9,7 @@ from pykafka import KafkaClient
 from collections import defaultdict
 from flask import jsonify
 from connexion import FlaskApp
+from flask_cors import CORS
 from connexion.middleware import MiddlewarePosition
 from starlette.middleware.cors import CORSMiddleware
 from contextlib import contextmanager
