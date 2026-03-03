@@ -1,5 +1,5 @@
 import mysql.connector
-db_conn = mysql.connector.connect(host="lab6kafka.canadacentral.cloudapp.azure.com", user="user",password="ACIT3855", database="events")
+db_conn = mysql.connector.connect(host="localhost", user="user",password="ACIT3855", database="events")
 db_cursor = db_conn.cursor()
 db_cursor.execute('''
 CREATE TABLE aircraft_location
