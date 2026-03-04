@@ -12,7 +12,7 @@ handlers:
     class: logging.FileHandler
     level: DEBUG
     formatter: simple
-    filename: logs/app_processing.log
+    filename: /logs/app_processing.log #remove leading slash if running locally
 loggers:
   basicLogger:
     level: DEBUG

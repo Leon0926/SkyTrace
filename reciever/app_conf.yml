@@ -1,9 +1,9 @@
 version: 1
 eventstore1:
-   url: http://localhost:8090/readings/location
+   url: http://storage:8090//storage/readings/location
 eventstore2:
-  url: http://localhost:8090/readings/time-until-arrival
+  url: http://storage:8090/storage/readings/time-until-arrival
 events:
-   hostname: localhost
+   hostname: kafka
    port: 9092
    topic: events

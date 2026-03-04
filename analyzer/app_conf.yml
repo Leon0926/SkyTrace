@@ -2,8 +2,8 @@ version: 1
 datastore: 
   filename: data.json
 eventstore:
-  url: http://localhost:8110
+  url: http://analyzer:8110
 events:
-   hostname: localhost
+   hostname: kafka
    port: 9092
    topic: events
