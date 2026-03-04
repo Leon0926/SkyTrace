@@ -9,6 +9,7 @@ import yaml
 import logging.config, logging
 import uuid
 from pykafka import KafkaClient
+import time
 
 DATA_STORAGE_URL="http://localhost:8090/readings"
 
@@ -72,12 +73,30 @@ logger.info("App Conf File: %s" % app_conf_file)
 logger.info("Log Conf File: %s" % log_conf_file)
 
 
-hostname = app_config['events']['hostname']
-port = app_config['events']['port']
-client = KafkaClient(hosts=f'{hostname}:{port}')
+# hostname = app_config['events']['hostname']
+# port = app_config['events']['port']
+# client = KafkaClient(hosts=f'{hostname}:{port}')
 
-kafka_topic = client.topics[str.encode(app_config['events']['topic'])]
-kafka_producer = kafka_topic.get_sync_producer()
+# kafka_topic = client.topics[str.encode(app_config['events']['topic'])]
+# kafka_producer = kafka_topic.get_sync_producer()
+
+def connect_to_kafka(max_retries=10, wait_sec=5):
+    hostname = app_config['events']['hostname']
+    port = app_config['events']['port']
+    
+    for attempt in range(max_retries):
+        try:
+            client = KafkaClient(hosts=f'{hostname}:{port}')
+            topic = client.topics[str.encode(app_config['events']['topic'])]
+            producer = topic.get_sync_producer()
+            logger.info("Connected to Kafka successfully")
+            return client, producer
+        except Exception as e:
+            logger.warning(f"Kafka not ready (attempt {attempt+1}/{max_retries}): {e}")
+            time.sleep(wait_sec)
+    raise Exception("Could not connect to Kafka after max retries")
+
+client, kafka_producer = connect_to_kafka()
 
 app = connexion.FlaskApp(__name__, specification_dir='')
 app.add_api("lli249-Aircraft-Readings-1.0.0-resolved.yaml",
