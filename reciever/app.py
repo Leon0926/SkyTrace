@@ -28,7 +28,7 @@ def report_aircraft_location(body):
             datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
         "payload": reading }
     msg_str = json.dumps(msg)
-    kafka_producer.produce(msg_str.encode('utf-8'))
+    produce_message(msg_str)
     return NoContent, 201
 
 def report_time_until_arrival(body):
@@ -44,7 +44,7 @@ def report_time_until_arrival(body):
             datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
         "payload": reading }
     msg_str = json.dumps(msg)
-    kafka_producer.produce(msg_str.encode('utf-8'))
+    produce_message(msg_str)
     
     return NoContent, 201
 
@@ -97,6 +97,18 @@ def connect_to_kafka(max_retries=10, wait_sec=5):
     raise Exception("Could not connect to Kafka after max retries")
 
 client, kafka_producer = connect_to_kafka()
+
+def produce_message(msg_str):
+    global client, kafka_producer
+    try:
+        kafka_producer.produce(msg_str.encode('utf-8'))
+    except Exception as e:
+        logger.warning(f"Producer disconnected, reconnecting: {e}")
+        client, kafka_producer = connect_to_kafka(
+            app_config['events']['hostname'],
+            app_config['events']['port']
+        )
+        kafka_producer.produce(msg_str.encode('utf-8'))
 
 app = connexion.FlaskApp(__name__, specification_dir='')
 app.add_api("lli249-Aircraft-Readings-1.0.0-resolved.yaml",
