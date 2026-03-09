@@ -4,7 +4,6 @@ import json
 import datetime
 from datetime import datetime
 import os
-import requests
 import yaml
 import logging.config, logging
 import uuid

@@ -6,14 +6,13 @@ import logging, logging.config
 from apscheduler.schedulers.background import BackgroundScheduler
 import json
 import requests
-import swagger_ui_bundle
 import os
-from connexion import FlaskApp
 from flask_cors import CORS
 from connexion.middleware import MiddlewarePosition
 from starlette.middleware.cors import CORSMiddleware
 
 def get_stats():
+    """ Get the current statistics of aircraft readings """
     logger.info("Get stats request has started")
 
     try:
@@ -37,7 +36,7 @@ def get_stats():
     return response, 200
 
 def populate_stats():
-    """periodically update stats"""
+    """Fetch new events from the event store and update the stats in the datastore"""
     logger.info("Start populating stats")
 
     default_stats = {
@@ -45,7 +44,7 @@ def populate_stats():
         'max_location_latitude_reading': 0,
         'num_time_until_arrival_readings': 0,
         'max_time_until_arrival_time_difference_in_ms_reading': 0,
-        'last_updated': "2024-10-15T09:56:32.977743"
+        'last_updated': default_start_time
     }
 
     filename = app_config['datastore']['filename']
@@ -58,21 +57,18 @@ def populate_stats():
             stats = default_stats
             json.dump(stats, f, indent=4)
     
-    last_updated = stats.get('last_updated', '2024-01-15T09:56:32.977743')
+    last_updated = stats.get('last_updated', default_start_time)
     current_time = datetime.now().isoformat()
     logger.debug(f"Querying location events from {last_updated} to {current_time}")
 
     location_url=requests.get(app_config['eventstore']['url'] + "/readings/location?start_timestamp=" + last_updated + "&end_timestamp=" + current_time)
     time_until_arrival_url=requests.get(app_config['eventstore']['url'] + "/readings/time-until-arrival?start_timestamp=" + last_updated + "&end_timestamp=" + current_time)
-    
-    print(location_url.status_code)
-    print(location_url.text)
+
     logger.debug(f"Querying location events from {last_updated} to {current_time}")
     
     try:
         if location_url.status_code == 201:
             location_events = location_url.json()
-            print("LOCATION_URL.JSON\n\n",location_events)
 
             #number of location readings
             num_location_events = len(location_events)
@@ -116,7 +112,6 @@ def populate_stats():
 
     except Exception as e:
         logger.error(f"Error occurred while updating stats: {str(e)}")
-        
 
 def init_scheduler():
     sched = BackgroundScheduler(daemon=True)
@@ -144,6 +139,7 @@ logger = logging.getLogger('basicLogger')
 logger.info("App Conf File: %s" % app_conf_file)
 logger.info("Log Conf File: %s" % log_conf_file)
 
+default_start_time = app_config['scheduler']['default_start_time']
 
 app = connexion.FlaskApp(__name__, specification_dir='')
 app.add_api("lli249-Aircraft-Readings-1.0.0-resolved.yaml",
@@ -163,7 +159,9 @@ if "TARGET_ENV" not in os.environ or os.environ["TARGET_ENV"] != "test":
     CORS(app.app)
     app.app.config['CORS_HEADERS'] = 'Content-Type'
 
+
+populate_stats()
+init_scheduler()
+
 if __name__ == "__main__":
-    populate_stats()
-    init_scheduler()
     app.run(host='0.0.0.0',port=8100)
