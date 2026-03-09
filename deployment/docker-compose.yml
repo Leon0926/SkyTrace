@@ -45,7 +45,7 @@ services:
     platform: linux/amd64
     restart: always
     env_file:
-      - ../.env
+      - .env
     environment:
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
@@ -70,7 +70,7 @@ services:
     networks:
       - "api.network"
     env_file:
-      - ../.env
+      - .env
     volumes:
       - ./config/reciever:/config
       - ./logs:/logs
@@ -85,7 +85,7 @@ services:
     networks:
       - "api.network"
     env_file:
-      - ../.env
+      - .env
     volumes:
       - .config/storage:/config
       - ./logs:/logs
@@ -101,7 +101,7 @@ services:
     networks:
       - "api.network"
     env_file:
-      - ../.env
+      - .env
     volumes:
       - ./config/processing:/config
       - ./logs:/logs
@@ -116,7 +116,7 @@ services:
     networks:
       - "api.network"
     env_file:
-      - ../.env
+      - .env
     volumes:
       - ./config/analyzer:/config
       - ./logs:/logs

@@ -12,7 +12,7 @@ handlers:
     class: logging.FileHandler
     level: DEBUG
     formatter: simple
-    filename: /logs/app_storage.log #remove leading slash if running locally
+    filename: /logs/app_storage.log #remove leading slash if running locally w/o docker
 loggers:
   basicLogger:
     level: DEBUG
