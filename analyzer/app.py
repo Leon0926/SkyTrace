@@ -1,14 +1,12 @@
 import connexion
 from connexion import NoContent
 import json
-import datetime
 from datetime import datetime
 import yaml
 import logging.config, logging
 from pykafka import KafkaClient
 from collections import defaultdict
 from flask import jsonify
-from connexion import FlaskApp
 from flask_cors import CORS
 from connexion.middleware import MiddlewarePosition
 from starlette.middleware.cors import CORSMiddleware
@@ -34,46 +32,6 @@ def get_kafka_consumer(hostname, topic_name):
                 consumer.stop()
             except Exception as e:
                 logger.error(f"Error cleaning up consumer: {str(e)}")
-
-app = connexion.FlaskApp(__name__, specification_dir='')
-app.add_api("lli249-Aircraft_readings-1.0.0-resolved.yaml",
-            base_path="/analyzer",
-            strict_validation=True,
-            validate_responses=True)
-
-app.add_middleware(
-    CORSMiddleware,
-    position=MiddlewarePosition.BEFORE_EXCEPTION,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-if "TARGET_ENV" not in os.environ or os.environ["TARGET_ENV"] != "test":
-    CORS(app.app)
-    app.app.config['CORS_HEADERS'] = 'Content-Type'
-
-if "TARGET_ENV" in os.environ and os.environ["TARGET_ENV"] == "test":
-    print("In Test Environment")
-    app_conf_file = "/config/app_conf.yml"
-    log_conf_file = "/config/log_conf.yml"
-else:
-    print("In Dev Environment")
-    app_conf_file = "app_conf.yml"
-    log_conf_file = "log_conf.yml"
-
-with open(app_conf_file, 'r') as f:
-    app_config = yaml.safe_load(f.read())
-    
-with open(log_conf_file, 'r') as f:
-    log_config = yaml.safe_load(f.read())
-    logging.config.dictConfig(log_config)
-    
-logger = logging.getLogger('basicLogger')
-
-logger.info("App Conf File: %s" % app_conf_file)
-logger.info("Log Conf File: %s" % log_conf_file)
-
 
 def get_aircraft_location_reading(index):
     """ Get location Reading in History """
@@ -197,7 +155,7 @@ def get_event_stats():
                         except json.JSONDecodeError as e:
                             logger.error(f"Error decoding message: {str(e)}")
                             continue
-                    break  # If we get here successfully, break the retry loop
+                    break 
                     
                 except Exception as e:
                     logger.error(f"Error reading messages (attempt {retry_count + 1}): {str(e)}")
@@ -213,5 +171,45 @@ def get_event_stats():
         logger.error(f"Error connecting to Kafka: {str(e)}")
         return {"message": "Error connecting to message broker"}, 500
 
+if "TARGET_ENV" in os.environ and os.environ["TARGET_ENV"] == "test":
+    print("In Test Environment")
+    app_conf_file = "/config/app_conf.yml"
+    log_conf_file = "/config/log_conf.yml"
+else:
+    print("In Dev Environment")
+    app_conf_file = "app_conf.yml"
+    log_conf_file = "log_conf.yml"
+
+with open(app_conf_file, 'r') as f:
+    app_config = yaml.safe_load(f.read())
+    
+with open(log_conf_file, 'r') as f:
+    log_config = yaml.safe_load(f.read())
+    logging.config.dictConfig(log_config)
+    
+logger = logging.getLogger('basicLogger')
+
+logger.info("App Conf File: %s" % app_conf_file)
+logger.info("Log Conf File: %s" % log_conf_file)
+
+app = connexion.FlaskApp(__name__, specification_dir='')
+app.add_api("lli249-Aircraft_readings-1.0.0-resolved.yaml",
+            base_path="/analyzer",
+            strict_validation=True,
+            validate_responses=True)
+
+app.add_middleware(
+    CORSMiddleware,
+    position=MiddlewarePosition.BEFORE_EXCEPTION,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+if "TARGET_ENV" not in os.environ or os.environ["TARGET_ENV"] != "test":
+    CORS(app.app)
+    app.app.config['CORS_HEADERS'] = 'Content-Type'
+    
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8110)
