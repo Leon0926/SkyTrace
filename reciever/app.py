@@ -11,46 +11,6 @@ import uuid
 from pykafka import KafkaClient
 import time
 
-DATA_STORAGE_URL="http://localhost:8090/readings"
-
-def generate_trace_id():
-    return str(uuid.uuid4())
-
-def report_aircraft_location(body):
-    event_name = "location"
-    trace_id = generate_trace_id()
-    body["trace_id"] = trace_id
-    reading = body
-    kafak_topic = client.topics[str.encode(app_config['events']['topic'])]
-    #producer = kafka_topic.get_sync_producer()
-    msg = { "type": "location_reading",
-        "datetime" :
-            datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
-        "payload": reading }
-    msg_str = json.dumps(msg)
-    produce_message(msg_str)
-    return NoContent, 201
-
-def report_time_until_arrival(body):
-    
-    event_name = "time_until_arrival"
-    trace_id = generate_trace_id()
-    body["trace_id"] = trace_id
-    reading = body
-    kafka_topic = client.topics[str.encode(app_config['events']['topic'])]
-    #producer = kafka_topic.get_sync_producer()
-    msg = { "type": "time_until_arrival_reading",
-        "datetime" :
-            datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
-        "payload": reading }
-    msg_str = json.dumps(msg)
-    produce_message(msg_str)
-    
-    return NoContent, 201
-
-def get_check():
-    return NoContent, 200
-
 if "TARGET_ENV" in os.environ and os.environ["TARGET_ENV"] == "test":
     print("In Test Environment")
     app_conf_file = "/config/app_conf.yml"
@@ -72,14 +32,6 @@ logger = logging.getLogger('basicLogger')
 logger.info("App Conf File: %s" % app_conf_file)
 logger.info("Log Conf File: %s" % log_conf_file)
 
-
-# hostname = app_config['events']['hostname']
-# port = app_config['events']['port']
-# client = KafkaClient(hosts=f'{hostname}:{port}')
-
-# kafka_topic = client.topics[str.encode(app_config['events']['topic'])]
-# kafka_producer = kafka_topic.get_sync_producer()
-
 def connect_to_kafka(max_retries=10, wait_sec=5):
     hostname = app_config['events']['hostname']
     port = app_config['events']['port']
@@ -98,7 +50,41 @@ def connect_to_kafka(max_retries=10, wait_sec=5):
 
 client, kafka_producer = connect_to_kafka()
 
+def generate_trace_id():
+    return str(uuid.uuid4())
+
+def report_aircraft_location(body):
+    """ Report aircraft location reading by publishing to Kafka topic """
+    trace_id = generate_trace_id()
+    body["trace_id"] = trace_id
+    reading = body
+    msg = { "type": "location_reading",
+        "datetime" :
+            datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+        "payload": reading }
+    msg_str = json.dumps(msg)
+    produce_message(msg_str)
+    return NoContent, 201
+
+def report_time_until_arrival(body):
+    """ Report aircraft time-until-arrival reading by publishing to Kafka topic """
+    trace_id = generate_trace_id()
+    body["trace_id"] = trace_id
+    reading = body
+    msg = { "type": "time_until_arrival_reading",
+        "datetime" :
+            datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+        "payload": reading }
+    msg_str = json.dumps(msg)
+    produce_message(msg_str)
+    
+    return NoContent, 201
+
+def get_check():
+    return NoContent, 200
+
 def produce_message(msg_str):
+    """ Publish message to kafka topic with retry logic if fails """
     global client, kafka_producer
     try:
         kafka_producer.produce(msg_str.encode('utf-8'))
