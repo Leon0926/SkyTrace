@@ -6,15 +6,15 @@ Distributed aircraft telementry pipeline built with Python microservices, Kafka,
 
 6 independent services communicate through a shared Kafka topic and over Docker network
 
-**Receiver** — Edge service that ingests aircraft telemetry via REST, validates payloads, and publishes to Kafka. The only public-facing write endpoint in the system.
+**Receiver** — Public-facing edge service that ingests aircraft telemetry via REST, validates payloads, and publishes to Kafka. 
 
 **Storage** — Consumes Kafka events and persists to MySQL. Also exposes a time-range query API.
 
-**Processing** — Polls Storage on a configurable schedule, computes running aggregate stats (event counts, max values), and caches results to disk. State persists across restarts.
+**Processing** — Polls Storage periodically, computes running aggregate stats (event counts, max values), and caches results to disk.
 
-**Analyzer** — Read-only Kafka consumer. Look up any event by queue index or get a count of events per type.
+**Analyzer** — Read-only Kafka consumer. Look up any event by queue index or get a count of events per type. 
 
-**Anomaly Detector** — Consumes Kafka events and flags readings that breach configurable thresholds (too high / too low). Persists anomalies to a local JSON store.
+**Anomaly Detector** — Consumes Kafka events and flags readings that breach configurable thresholds. Persists anomalies to local JSON file.
 
 **Health Check** — Single endpoint that polls all services routinely and writes a live status snapshot. 
 
