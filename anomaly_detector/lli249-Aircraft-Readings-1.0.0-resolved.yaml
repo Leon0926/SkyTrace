@@ -69,7 +69,7 @@ components:
           example: EVENT1
         anomaly_type:
           type: string
-          example: Too High
+          example: TooHigh
         description:
           type: string
           example: The value is too high

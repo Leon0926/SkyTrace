@@ -4,17 +4,15 @@ import datetime
 import logging
 import logging.config
 import yaml
-import uuid
 from pykafka import KafkaClient
 from pykafka.common import OffsetType
 import os
-import time
 from threading import Thread
 
 if "TARGET_ENV" in os.environ and os.environ["TARGET_ENV"] == "test":
     print("In Test Environment")
-    app_conf_file = "/config/app_conf.yml"
-    log_conf_file = "/config/log_conf.yml"
+    app_conf_file = "app_conf.yml"
+    log_conf_file = "log_conf.yml"
 else:
     print("In Dev Environment")
     app_conf_file = "app_conf.yml"
@@ -74,18 +72,18 @@ def process_messages():
                     'event_id': payload['client_id'],
                     'trace_id': payload['trace_id'],
                     'event_type': 'location - altitude',
-                    'anomaly_type': 'Too High',
-                    'description': f"altitude value {bp_value} exceeds threshold of {app_config['thresholds']['altitude_high']}",
+                    'anomaly_type': 'TooHigh',
+                    'description': f"altitude value {altitude} exceeds threshold of {app_config['thresholds']['altitude_high']}",
                     'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 }
                 store_anomaly(anomaly)
-            elif altitude < app_config['thresholds']['bp_low']:
+            elif altitude < app_config['thresholds']['altitude_low']:
                 anomaly = {
                     'event_id': payload['client_id'],
                     'trace_id': payload['trace_id'],
                     'event_type': 'location - altitude',
-                    'anomaly_type': 'Too Low',
-                    'description': f"altitude value {bp_value} is below threshold of {app_config['thresholds']['altitude_low']}",
+                    'anomaly_type': 'TooLow',
+                    'description': f"altitude value {altitude} is below threshold of {app_config['thresholds']['altitude_low']}",
                     'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 }
                 store_anomaly(anomaly)
@@ -97,8 +95,8 @@ def process_messages():
                     'event_id': payload['flight_id'],
                     'trace_id': payload['trace_id'],
                     'event_type': 'time_until_arrival - time_difference_in_ms',
-                    'anomaly_type': 'Too High',
-                    'description': f"time_difference_in_ms {hr_value} exceeds threshold of {app_config['thresholds']['time_difference_in_ms_high']}",
+                    'anomaly_type': 'TooHigh',
+                    'description': f"time_difference_in_ms {time_difference_in_ms} exceeds threshold of {app_config['thresholds']['time_difference_in_ms_high']}",
                     'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 }
                 store_anomaly(anomaly)
@@ -107,8 +105,8 @@ def process_messages():
                     'event_id': payload['flight_id'],
                     'trace_id': payload['trace_id'],
                     'event_type': 'time_until_arrival - time_difference_in_ms',
-                    'anomaly_type': 'Too Low',
-                    'description': f"time_difference_in_ms {hr_value} is below threshold of {app_config['thresholds']['time_difference_in_ms_low']}",
+                    'anomaly_type': 'TooLow',
+                    'description': f"time_difference_in_ms {time_difference_in_ms} is below threshold of {app_config['thresholds']['time_difference_in_ms_low']}",
                     'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 }
                 store_anomaly(anomaly)
@@ -116,6 +114,7 @@ def process_messages():
         consumer.commit_offsets()
         
 def init_datastore():
+    os.makedirs(os.path.dirname(app_config['datastore']['filename']), exist_ok=True)
     if not os.path.exists(app_config['datastore']['filename']):
         with open(app_config['datastore']['filename'], 'w') as f:
             json.dump([], f)
@@ -129,7 +128,7 @@ def get_anomalies(anomaly_type=None):
     except FileNotFoundError:
         return {"message": "Anomalies data store not found"}, 404
     
-    valid_types = ['Too High', 'Too Low']
+    valid_types = ['TooHigh', 'TooLow']
     if anomaly_type and anomaly_type not in valid_types:
         return {"message": f"Invalid anomaly type. Must be one of {valid_types}"}, 400
     
@@ -143,7 +142,8 @@ def get_anomalies(anomaly_type=None):
     
     return anomalies, 200
 
-app.add_api("openapi.yml", strict_validation=True, validate_responses=True)
+app = connexion.FlaskApp(__name__, specification_dir='')
+app.add_api("lli249-Aircraft-Readings-1.0.0-resolved.yaml",base_path='/anomaly_detector', strict_validation=True, validate_responses=True)
 
 if __name__ == "__main__":
     init_datastore()
