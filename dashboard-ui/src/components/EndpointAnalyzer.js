@@ -9,7 +9,7 @@ export default function EndpointAnalyzer(props) {
     const [index, setIndex] = useState(null);
 
     const getAnalyzer = () => {
-        fetch(`http://lab6kafka.canadacentral.cloudapp.azure.com/analyzer/${props.endpoint}?index=${rand_val}`)
+        fetch(`http://localhost/analyzer/${props.endpoint}?index=${rand_val}`)
             .then(res => res.json())
             .then((result)=>{
 				console.log("Received Analyzer Results for " + props.endpoint)
