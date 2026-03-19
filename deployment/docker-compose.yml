@@ -122,62 +122,64 @@ services:
       - ./logs:/logs
     depends_on:
       - "kafka"
-  # dashboard:
-  #   image: dashboard
-  #   ports:
-  #     - "3000"
-  #   networks:
-  #     - "api.network"
-  #   depends_on:
-  #     - "processing"
-  #     - "analyzer"
-  # check:
-  #   image: check
-  #   restart: always
-  #   ports:
-  #     - "8130"
-  #   networks:
-  #     - "api.network"
-  #   environment:
-  #     - TARGET_ENV=test
-  #   volumes:
-  #     - ./config/check:/config
-  #     - ./logs:/logs
-  #     - check-data:/data   
-  # nginx:
-  #   image: nginx:latest
-  #   # Connects the conf file of the container to the conf file in our folder
-  #   volumes:
-  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-  #   # It will start up the nginx only when all api containers have started
-  #   depends_on:
-  #     - "reciever"
-  #     - "storage"
-  #     - "processing"
-  #     - "analyzer"
-  #     - "dashboard"
-  #   # Connects the port 80 of the nginx container to localhost:80 or localhost
-  #   ports:
-  #     - "80:80"
-  #   networks:
-  #     - "api.network"
-  # anomaly_detector:
-  #   image: anomaly_detector
-  #   restart: always
-  #   ports:
-  #     - "8120"
-  #   volumes:
-  #     - /home/azureuser/logs:/logs
-  #     - /home/azureuser/config/anomaly-detector:/config
-  #   depends_on:
-  #     kafka:
-  #       condition: service_healthy
-  #   networks:
-  #     - api.network
-  #   environment:
-  #     - TARGET_ENV=test
-
-
+  dashboard:
+    image: dashboard
+    ports:
+      - "3000:3000"
+    networks:
+      - "api.network"
+    depends_on:
+      - "processing"
+      - "analyzer"
+  check:
+    image: check
+    restart: always
+    ports:
+      - "8130"
+    networks:
+      - "api.network"
+    environment:
+      - TARGET_ENV=test
+    build:
+      context: ../check
+    volumes:
+      - ./config/check:/config
+      - ./logs:/logs
+      - check-data:/data   
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    # start up the nginx only when all api containers have started
+    depends_on:
+      - "reciever"
+      - "storage"
+      - "processing"
+      - "analyzer"
+      - "dashboard"
+    # connects the port 80 of the nginx container to localhost:80 or localhost
+    ports:
+      - "80:80"
+    networks:
+      - "api.network"
+  anomaly_detector:
+    image: anomaly_detector
+    restart: always
+    ports:
+      - "8120"
+    volumes:
+      - ./logs:/logs
+      - ./config/anomaly-detector:/config
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - api.network
+    environment:
+      - TARGET_ENV=test
+    build:
+      context: ../anomaly_detector
+      
 volumes:
   my-db:
   processing-db:
