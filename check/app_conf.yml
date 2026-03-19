@@ -1,10 +1,14 @@
 version: 1
 check:
   url:
-    receiver: http://lab6kafka.canadacentral.cloudapp.azure.com/receiver/check
-    storage: http://lab6kafka.canadacentral.cloudapp.azure.com/storage/stats
-    processing: http://lab6kafka.canadacentral.cloudapp.azure.com/processing/stats
-    analyzer: http://lab6kafka.canadacentral.cloudapp.azure.com/analyzer/stats
+    receiver: http://receiver:8080/receiver/check
+    storage: http://storage:8090/storage/stats
+    processing: http://processing:8100/processing/stats
+    analyzer: http://analyzer:8110/analyzer/stats
+    # receiver: http://lab6kafka.canadacentral.cloudapp.azure.com/receiver/check
+    # storage: http://lab6kafka.canadacentral.cloudapp.azure.com/storage/stats
+    # processing: http://lab6kafka.canadacentral.cloudapp.azure.com/processing/stats
+    # analyzer: http://lab6kafka.canadacentral.cloudapp.azure.com/analyzer/stats
   status_file: /data/status.json
   scheduler:
     period_sec: 10

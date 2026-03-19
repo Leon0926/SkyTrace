@@ -6,9 +6,6 @@ import os
 import yaml
 import logging
 import logging.config
-import requests
-import datetime
-from requests.exceptions import Timeout, ConnectionError
 from apscheduler.schedulers.background import BackgroundScheduler
 from connexion import FlaskApp
 from connexion.middleware import MiddlewarePosition
@@ -16,8 +13,8 @@ from starlette.middleware.cors import CORSMiddleware
 
 if "TARGET_ENV" in os.environ and os.environ["TARGET_ENV"] == "test":
     print("In Test Environment")
-    app_conf_file = "/config/app_conf.yml"
-    log_conf_file = "/config/log_conf.yml"
+    app_conf_file = "app_conf.yml"
+    log_conf_file = "log_conf.yml"
 else:
     print("In Dev Environment")
     app_conf_file = "app_conf.yml"
@@ -128,10 +125,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-if "TARGET_ENV" not in os.environ or os.environ["TARGET_ENV"] != "test":
-    CORS(app.app)
-    app.app.config['CORS_HEADERS'] = 'Content-Type'
 
 if __name__ == "__main__":
     init_scheduler()
-    app.run(port=8130)
+    app.run(host='0.0.0.0', port=8130)
