@@ -145,11 +145,11 @@ def get_anomalies(anomaly_type=None):
 app = connexion.FlaskApp(__name__, specification_dir='')
 app.add_api("lli249-Aircraft-Readings-1.0.0-resolved.yaml",base_path='/anomaly_detector', strict_validation=True, validate_responses=True)
 
+init_datastore()
+
+t1 = Thread(target=process_messages)
+t1.Daemon = True
+t1.start()
+
 if __name__ == "__main__":
-    init_datastore()
-    
-    t1 = Thread(target=process_messages)
-    t1.setDaemon(True)
-    t1.start()
-    
     app.run(host='0.0.0.0', port=8120)
