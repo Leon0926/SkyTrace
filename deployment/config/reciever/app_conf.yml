@@ -1,0 +1,9 @@
+version: 1
+eventstore1:
+   url: http://storage:8090/storage/readings/location
+eventstore2:
+  url: http://storage:8090/storage/readings/time-until-arrival
+events:
+   hostname: kafka
+   port: 9092
+   topic: events

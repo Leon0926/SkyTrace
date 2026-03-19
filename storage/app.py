@@ -34,7 +34,7 @@ logger.info("App Conf File: %s" % app_conf_file)
 logger.info("Log Conf File: %s" % log_conf_file)
 
 user = app_config['datastore']['user']
-password = os.environ.get('MYSQL_PASSWORD', app_config['datastore']['password'])
+password = os.environ.get('MYSQL_PASSWORD')
 hostname = app_config['datastore']['hostname']
 port = app_config['datastore']['port']
 db = app_config['datastore']['db']

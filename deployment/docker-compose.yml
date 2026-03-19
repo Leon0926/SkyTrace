@@ -71,12 +71,16 @@ services:
       - "api.network"
     env_file:
       - .env
+    environment:
+      - TARGET_ENV=test
     volumes:
       - ./config/reciever:/config
       - ./logs:/logs
     depends_on:
       kafka:
         condition: service_healthy
+    build:
+      context: ../reciever
   storage:
     image: storage
     restart: always
@@ -86,13 +90,17 @@ services:
       - "api.network"
     env_file:
       - .env
+    environment:
+      - TARGET_ENV=test
     volumes:
-      - .config/storage:/config
+      - ./config/storage:/config
       - ./logs:/logs
       #was absoulte path
     depends_on:
       kafka:
         condition: service_healthy
+    build:
+      context: ../storage
   processing:
     image: processing
     restart: always
@@ -102,12 +110,16 @@ services:
       - "api.network"
     env_file:
       - .env
+    environment:
+      - TARGET_ENV=test
     volumes:
       - ./config/processing:/config
       - ./logs:/logs
       - processing-db:/data
     depends_on:
       - storage
+    build:
+      context: ../processing
   analyzer:
     image: analyzer
     restart: always
@@ -117,11 +129,15 @@ services:
       - "api.network"
     env_file:
       - .env
+    environment:
+      - TARGET_ENV=test
     volumes:
       - ./config/analyzer:/config
       - ./logs:/logs
     depends_on:
       - "kafka"
+    build:
+      context: ../analyzer
   dashboard:
     image: dashboard
     ports:
@@ -131,6 +147,8 @@ services:
     depends_on:
       - "processing"
       - "analyzer"
+    build:
+      context: ../dashboard
   check:
     image: check
     restart: always
@@ -179,7 +197,7 @@ services:
       - TARGET_ENV=test
     build:
       context: ../anomaly_detector
-      
+
 volumes:
   my-db:
   processing-db:

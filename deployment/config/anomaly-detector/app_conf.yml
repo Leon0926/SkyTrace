@@ -1,0 +1,12 @@
+version: 1
+datastore:
+  filename: /data/anomalies.json
+kafka:
+  hostname: "kafka"
+  port: 9092
+  topic: "events"
+thresholds:
+  altitude_high: 45000
+  altitude_low: 0
+  time_difference_in_ms_high: 300000
+  time_difference_in_ms_low: -300000

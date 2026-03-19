@@ -1,0 +1,8 @@
+version: 1
+datastore: 
+  filename: data.json
+scheduler:
+  period_sec: 10
+  default_start_time: "2024-10-15T09:56:32.977743"
+eventstore:
+  url: http://storage:8090/storage
