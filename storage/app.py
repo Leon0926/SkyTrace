@@ -33,12 +33,11 @@ logger = logging.getLogger('basicLogger')
 logger.info("App Conf File: %s" % app_conf_file)
 logger.info("Log Conf File: %s" % log_conf_file)
 
-user = app_config['datastore']['user']
+user = os.environ.get('MYSQL_USER')
 password = os.environ.get('MYSQL_PASSWORD')
 hostname = app_config['datastore']['hostname']
 port = app_config['datastore']['port']
-db = app_config['datastore']['db']
-
+db = os.environ.get('MYSQL_DATABASE')
 DB_ENGINE = create_engine(f'mysql+pymysql://{user}:{password}@{hostname}:{port}/{db}',
                             pool_size=5,
                             pool_recycle=3600,
