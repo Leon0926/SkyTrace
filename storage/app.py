@@ -62,7 +62,7 @@ def get_aircraft_location(start_timestamp, end_timestamp):
 
     session.close()
     logger.info("Query for aircraft location readings after %s to %s compared to %s returns %d results", start_timestamp, end_timestamp, AircraftLocation.date_created, len(results_list))
-    return results_list, 201
+    return results_list, 200
 
 def get_aircraft_time_until_arrival(start_timestamp, end_timestamp):
     """ Get aircraft time-until-arrival readings between start and end timestamps filtered by date_created """
@@ -81,7 +81,7 @@ def get_aircraft_time_until_arrival(start_timestamp, end_timestamp):
 
     session.close()
     logger.info("Query for aircraft time-until-arrival readings after %s to %s returns %d results", start_timestamp, end_timestamp, len(results_list))
-    return results_list, 201
+    return results_list, 200
 
 def process_messages():
     """ Consume events from kafka and persist to MySQL DB

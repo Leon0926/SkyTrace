@@ -67,7 +67,7 @@ def populate_stats():
     logger.debug(f"Querying location events from {last_updated} to {current_time}")
     
     try:
-        if location_url.status_code == 201:
+        if location_url.status_code == 200:
             location_events = location_url.json()
 
             #number of location readings
@@ -85,7 +85,7 @@ def populate_stats():
         else:
             logger.error(f"Failed to get aircraft location events - status code: {location_url.status_code}")
 
-        if time_until_arrival_url.status_code == 201:
+        if time_until_arrival_url.status_code == 200:
             time_until_arrival_events = time_until_arrival_url.json()
 
             #number of time until arrival readings
