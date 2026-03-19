@@ -62,8 +62,8 @@ services:
     - my-db:/var/lib/mysql
     networks:           
       - "api.network"   
-  reciever:
-    image: reciever
+  receiver:
+    image: receiver
     restart: always
     ports:
       - "8080:8080"
@@ -74,13 +74,13 @@ services:
     environment:
       - TARGET_ENV=test
     volumes:
-      - ./config/reciever:/config
+      - ./config/receiver:/config
       - ./logs:/logs
     depends_on:
       kafka:
         condition: service_healthy
     build:
-      context: ../reciever
+      context: ../receiver
   storage:
     image: storage
     restart: always
@@ -170,7 +170,7 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     # start up the nginx only when all api containers have started
     depends_on:
-      - "reciever"
+      - "receiver"
       - "storage"
       - "processing"
       - "analyzer"

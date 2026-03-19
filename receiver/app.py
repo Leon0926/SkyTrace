@@ -80,24 +80,25 @@ def report_time_until_arrival(body):
     return NoContent, 201
 
 def get_check():
+    """ Health check endpoint """
     return NoContent, 200
 
-def produce_message(msg_str):
+def produce_message(msg_str, max_retries=3):
     """ Publish message to kafka topic with retry logic if fails """
     global client, kafka_producer
-    try:
-        kafka_producer.produce(msg_str.encode('utf-8'))
-    except Exception as e:
-        logger.warning(f"Producer disconnected, reconnecting: {e}")
-        client, kafka_producer = connect_to_kafka(
-            app_config['events']['hostname'],
-            app_config['events']['port']
-        )
-        kafka_producer.produce(msg_str.encode('utf-8'))
+    for attempt in range(max_retries):
+        try:
+            kafka_producer.produce(msg_str.encode('utf-8'))
+            logger.info("Message published to Kafka")
+            return
+        except Exception as e:
+            logger.warning(f"Produce failed (attempt {attempt+1}/{max_retries}): {e}")
+            client, kafka_producer = connect_to_kafka()
+    raise Exception("Could not produce message after max retries")
 
 app = connexion.FlaskApp(__name__, specification_dir='')
 app.add_api("lli249-Aircraft-Readings-1.0.0-resolved.yaml",
-            base_path="/reciever",
+            base_path="/receiver",
             strict_validation=True,
             validate_responses=True)
 
