@@ -51,11 +51,3 @@ class ArrivalTime(Base):
             "trace_id": self.trace_id
         }
 
-# Create the SQLite database
-def create_database():
-    engine = create_engine('sqlite:///events.db')
-    Base.metadata.create_all(engine)
-    print("Database created with two tables: aircraft_location and arrival_time")
-
-if __name__ == "__main__":
-    create_database()
