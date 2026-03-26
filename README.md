@@ -2,6 +2,11 @@
 
 Distributed aircraft telementry pipeline built with Python microservices, Kafka, MySQL. Containerized with Docker Compose, routed with Nginx.
 
+## Why I built this
+To show practical experience with distributed systems. Includes: <br><br>
+• Microservice Architecture  • Async Messaging  • Event Sourcing • Observability - Health Check + Dashboard <br>
+• Containerization + Orchestration  • RESTful API Design • Reverse Proxy + Load Balancing 
+
 <img width="1869" height="887" alt="image" src="https://github.com/user-attachments/assets/c81e6e83-832c-412f-83e7-29c5554e9fbd" />
 
 ## Architecture Summary (More details below)
