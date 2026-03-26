@@ -2,6 +2,8 @@
 
 Distributed aircraft telementry pipeline built with Python microservices, Kafka, MySQL. Containerized with Docker Compose, routed with Nginx.
 
+<img width="1869" height="887" alt="image" src="https://github.com/user-attachments/assets/c81e6e83-832c-412f-83e7-29c5554e9fbd" />
+
 ## Architecture Summary (More details below)
 
 6 independent services communicate through a shared Kafka topic and over Docker network
@@ -17,8 +19,6 @@ Distributed aircraft telementry pipeline built with Python microservices, Kafka,
 **Anomaly Detector** — Consumes Kafka events and flags readings that breach configurable thresholds. Persists anomalies to local JSON file.
 
 **Health Check** — Single endpoint that polls all services routinely and writes a live status snapshot. 
-
-### ADD IMAGE HERE
 
 ## Running Locally
 
