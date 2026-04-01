@@ -148,7 +148,7 @@ services:
       - "processing"
       - "analyzer"
     build:
-      context: ../dashboard
+      context: ../dashboard-ui
   check:
     image: check
     restart: always
