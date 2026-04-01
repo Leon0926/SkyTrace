@@ -1,6 +1,12 @@
 ## Description
 
-Distributed aircraft telementry pipeline built with Python microservices, Kafka, MySQL. Containerized with Docker Compose, routed with Nginx.
+Distributed aircraft telementry system built with Python microservices, Kafka, MySQL. Containerized with Docker Compose, routed with Nginx.
+Includes: <br>
+
+• Microservice Architecture  • Async Messaging  • Event Sourcing • Observability - Health Check + Dashboard <br>
+• Containerization + Orchestration  • RESTful API Design • Reverse Proxy + Load Balancing 
+
+<img width="1869" height="887" alt="image" src="https://github.com/user-attachments/assets/c81e6e83-832c-412f-83e7-29c5554e9fbd" />
 
 ## Architecture Summary (More details below)
 
@@ -17,8 +23,6 @@ Distributed aircraft telementry pipeline built with Python microservices, Kafka,
 **Anomaly Detector** — Consumes Kafka events and flags readings that breach configurable thresholds. Persists anomalies to local JSON file.
 
 **Health Check** — Single endpoint that polls all services routinely and writes a live status snapshot. 
-
-### ADD IMAGE HERE
 
 ## Running Locally
 
@@ -42,4 +46,4 @@ docker compose up --build
 | Analyzer |   • reads from Kafka to get events by index # or counts of event type<br> • 2 GET endpoint that returns event in kafka topic given index<br> • 1 GET endpoint that returns count of each event in kafka topic<br> • creates fresh consumer and cleans up per request (not persistent, more expensive)<br> • CORS for dashboard | 
 | Anomaly Detector |   • reads + writes detected event anomalies to flat, persistent local json<br> • anomalies defined as being outside given range of values defined in app_config<br> • 1 GET endpoint that returns anomalies; can be filtered by above/under threshholds<br> • reads from events topic under anomaly_group (diff from other events_group)<br> • runs async on daemon thread like storage | 
 | Health Check |   • pings every service and creates status report<br> • catches timeout and connection errors, writing status to local persistent json<br> • service url + timeout stored in app_config<br> • 1 GET endpoint to read status json <br> • runs async on daemon thread even N seconds (defined in config) | 
-| Dashboard | Fill this guy in | 
+| Dashboard | • React SPA that displays live aircraft telemtry data, auto refreshing<br> • polls processing service every 2 sec for aggregate stats<br> • polls analyzer service every 4 sec and fetch random event by index | 
