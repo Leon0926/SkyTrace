@@ -9,7 +9,7 @@ import logging, logging.config
 import json
 from pykafka import KafkaClient
 from pykafka.common import OffsetType
-from threading import Thread
+from threading import Thread, Lock
 import os
 
 if "TARGET_ENV" in os.environ and os.environ["TARGET_ENV"] == "test":
@@ -45,6 +45,8 @@ DB_ENGINE = create_engine(f'mysql+pymysql://{user}:{password}@{hostname}:{port}/
                             )
 
 Session = sessionmaker(bind=DB_ENGINE)
+consumer_thread = None
+consumer_lock = Lock()
 
 def get_aircraft_location(start_timestamp, end_timestamp):
     """ Get aircraft location readings between start and end timestamps filtered by date_created """
@@ -103,36 +105,66 @@ def process_messages():
         payload = msg["payload"]
         if msg["type"] == "location_reading": 
             session = Session()
-            new_location_event = AircraftLocation(
-                flight_id=payload["flight_id"],
-                latitude=payload["latitude"],
-                longitude=payload["longitude"],
-                timestamp=datetime.fromisoformat(payload["timestamp"]),
-                date_created=datetime.now(),
-                trace_id=payload["trace_id"]
-            )
-            session.add(new_location_event)
-            session.commit()
-            logger.info(f'Stored event {msg["type"]} request with a trace id of {payload["trace_id"]}')
-            session.close()
+            try:
+                existing_event = session.query(AircraftLocation).filter(
+                    AircraftLocation.trace_id == payload["trace_id"]
+                ).first()
+                if existing_event:
+                    logger.info('Duplicate event %s with trace id %s skipped', msg["type"], payload["trace_id"])
+                else:
+                    new_location_event = AircraftLocation(
+                        flight_id=payload["flight_id"],
+                        latitude=payload["latitude"],
+                        longitude=payload["longitude"],
+                        altitude=payload["altitude"],
+                        timestamp=datetime.fromisoformat(payload["timestamp"]),
+                        date_created=datetime.now(),
+                        trace_id=payload["trace_id"]
+                    )
+                    session.add(new_location_event)
+                    session.commit()
+                    logger.info(f'Stored event {msg["type"]} request with a trace id of {payload["trace_id"]}')
+            finally:
+                session.close()
 
         elif msg["type"] == "time_until_arrival_reading":
             session = Session()
-            new_arrival_event = ArrivalTime(
-                flight_id=payload["flight_id"],
-                estimated_arrival_time=payload["estimated_arrival_time"],
-                actual_arrival_time=payload["actual_arrival_time"],
-                time_difference_in_ms=payload["time_difference_in_ms"],
-                timestamp=datetime.fromisoformat(payload["timestamp"]),
-                date_created=datetime.now(),
-                trace_id=payload["trace_id"]
-            )
-            session.add(new_arrival_event)
-            session.commit()
-            logger.info(f'Stored event {msg["type"]} request with a trace id of {payload["trace_id"]}')
-            session.close()
+            try:
+                existing_event = session.query(ArrivalTime).filter(
+                    ArrivalTime.trace_id == payload["trace_id"]
+                ).first()
+                if existing_event:
+                    logger.info('Duplicate event %s with trace id %s skipped', msg["type"], payload["trace_id"])
+                else:
+                    new_arrival_event = ArrivalTime(
+                        flight_id=payload["flight_id"],
+                        estimated_arrival_time=payload["estimated_arrival_time"],
+                        actual_arrival_time=payload["actual_arrival_time"],
+                        time_difference_in_ms=payload["time_difference_in_ms"],
+                        timestamp=datetime.fromisoformat(payload["timestamp"]),
+                        date_created=datetime.now(),
+                        trace_id=payload["trace_id"]
+                    )
+                    session.add(new_arrival_event)
+                    session.commit()
+                    logger.info(f'Stored event {msg["type"]} request with a trace id of {payload["trace_id"]}')
+            finally:
+                session.close()
 
         consumer.commit_offsets()
+
+def start_consumer():
+    """Start the Kafka consumer once for this process."""
+    global consumer_thread
+    with consumer_lock:
+        if consumer_thread and consumer_thread.is_alive():
+            logger.info("Kafka consumer thread already running")
+            return
+
+        consumer_thread = Thread(target=process_messages)
+        consumer_thread.daemon = True
+        consumer_thread.start()
+        logger.info("Kafka consumer thread started")
 
 def get_event_stats():
     """ Get count of each type of event stored in DB """
@@ -156,13 +188,10 @@ app.add_api("lli249-Aircraft-Readings-1.0.0-resolved.yaml",
             strict_validation=True, 
             validate_responses=True)
 
-t1 = Thread(target=process_messages)
-t1.daemon = True
-t1.start()
-
 if __name__ == "__main__":
     logger.info(f"Connecting to DB. Hostname: {app_config['datastore']['hostname']}, Port: {app_config['datastore']['port']}")
 
+    start_consumer()
     app.run(host='0.0.0.0',port=8090)
     
     

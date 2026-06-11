@@ -8,6 +8,8 @@ from pykafka import KafkaClient
 from pykafka.common import OffsetType
 import os
 from threading import Thread
+from connexion.middleware import MiddlewarePosition
+from starlette.middleware.cors import CORSMiddleware
 
 if "TARGET_ENV" in os.environ and os.environ["TARGET_ENV"] == "test":
     print("In Test Environment")
@@ -136,7 +138,7 @@ def get_anomalies(anomaly_type=None):
         anomalies = [a for a in anomalies if a['anomaly_type'] == anomaly_type]
     
     if not anomalies:
-        return {"message": "No anomalies found"}, 404
+        return [], 200
         
     anomalies.sort(key=lambda x: x['timestamp'], reverse=True)
     
@@ -144,6 +146,15 @@ def get_anomalies(anomaly_type=None):
 
 app = connexion.FlaskApp(__name__, specification_dir='')
 app.add_api("lli249-Aircraft-Readings-1.0.0-resolved.yaml",base_path='/anomaly_detector', strict_validation=True, validate_responses=True)
+
+app.add_middleware(
+    CORSMiddleware,
+    position=MiddlewarePosition.BEFORE_EXCEPTION,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 init_datastore()
 

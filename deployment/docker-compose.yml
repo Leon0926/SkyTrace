@@ -147,13 +147,15 @@ services:
     depends_on:
       - "processing"
       - "analyzer"
+      - "check"
+      - "anomaly_detector"
     build:
       context: ../dashboard-ui
   check:
     image: check
     restart: always
     ports:
-      - "8130"
+      - "8130:8130"
     networks:
       - "api.network"
     environment:
@@ -175,6 +177,8 @@ services:
       - "processing"
       - "analyzer"
       - "dashboard"
+      - "check"
+      - "anomaly_detector"
     # connects the port 80 of the nginx container to localhost:80 or localhost
     ports:
       - "80:80"
@@ -184,10 +188,11 @@ services:
     image: anomaly_detector
     restart: always
     ports:
-      - "8120"
+      - "8120:8120"
     volumes:
       - ./logs:/logs
       - ./config/anomaly-detector:/config
+      - anomaly-data:/data
     depends_on:
       kafka:
         condition: service_healthy
@@ -202,6 +207,7 @@ volumes:
   my-db:
   processing-db:
   check-data:
+  anomaly-data:
 
 networks:
   api.network:

@@ -33,6 +33,7 @@ components:
         - storage
         - processing
         - analyzer
+        - anomaly_detector
       properties:
         receiver:
           type: string
@@ -46,3 +47,6 @@ components:
         analyzer:
           type: string
           example: "Analyzer has 6 Location and 4 Time_until_arrival events"
+        anomaly_detector:
+          type: string
+          example: "Healthy"

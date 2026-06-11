@@ -11,6 +11,7 @@ class AircraftLocation(Base):
     flight_id = Column(String, nullable=False)
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
+    altitude = Column(Float, nullable=False)
     timestamp = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
     date_created = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
     trace_id = Column(String, nullable=False)
@@ -21,6 +22,7 @@ class AircraftLocation(Base):
             "flight_id": self.flight_id,
             "latitude": self.latitude,
             "longitude": self.longitude,
+            "altitude": self.altitude,
             "timestamp": self.timestamp,
             "date_created": self.date_created,
             "trace_id": self.trace_id
@@ -50,4 +52,3 @@ class ArrivalTime(Base):
             "date_created": self.date_created,
             "trace_id": self.trace_id
         }
-

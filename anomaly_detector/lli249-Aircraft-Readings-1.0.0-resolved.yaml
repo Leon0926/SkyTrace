@@ -38,7 +38,7 @@ paths:
                   message:
                     type: string
         '404':
-          description: Anomalies do not exist
+          description: Anomaly data store does not exist
           content:
             application/json:
               schema:
@@ -77,4 +77,3 @@ components:
           type: string
           example: 2024-11-14 11:22:33
       type: object
-

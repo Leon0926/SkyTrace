@@ -44,6 +44,7 @@ RECEIVER_URL = app_config['check']['url']['receiver']
 STORAGE_URL = app_config['check']['url']['storage']
 PROCESSING_URL = app_config['check']['url']['processing']
 ANALYZER_URL = app_config['check']['url']['analyzer']
+ANOMALY_DETECTOR_URL = app_config['check']['url']['anomaly_detector']
 TIMEOUT = app_config['check']['timeout_sec'] # Set to 2 seconds in your config file
 
 def check_services():
@@ -99,6 +100,18 @@ def check_services():
     except (Timeout, ConnectionError):
         logger.info("Analyzer is Not Available")
     status['analyzer'] = analyzer_status
+
+    anomaly_detector_status = "Unavailable"
+    try:
+        response = requests.get(ANOMALY_DETECTOR_URL, timeout=TIMEOUT)
+        if response.status_code in [200, 404]:
+            anomaly_detector_status = "Healthy"
+            logger.info("Anomaly Detector is Healthy")
+        else:
+            logger.info("Anomaly Detector returning non-200/404 response")
+    except (Timeout, ConnectionError):
+        logger.info("Anomaly Detector is Not Available")
+    status['anomaly_detector'] = anomaly_detector_status
 
     status_file = app_config['check']['status_file']
     os.makedirs(os.path.dirname(status_file), exist_ok=True)

@@ -5,8 +5,9 @@ db_cursor.execute('''
 CREATE TABLE aircraft_location
 (id INT NOT NULL AUTO_INCREMENT,
 flight_id VARCHAR(250) NOT NULL,
-latitude VARCHAR(250) NOT NULL,
-longitude VARCHAR(250) NOT NULL,
+latitude FLOAT NOT NULL,
+longitude FLOAT NOT NULL,
+altitude FLOAT NOT NULL,
 timestamp VARCHAR(100) NOT NULL,
 trace_id VARCHAR(100) NOT NULL,
 date_created VARCHAR(100) NOT NULL,
