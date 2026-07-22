@@ -13,6 +13,7 @@ services:
   kafka:
     image: wurstmeister/kafka
     platform: linux/amd64
+    restart: always
     command: [start-kafka.sh]
     ports:
     - "9092:9092"
