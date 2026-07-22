@@ -17,17 +17,22 @@ services:
     command: [start-kafka.sh]
     ports:
     - "9092:9092"
+    - "7071:7071"
     hostname: kafka
     networks:
     - "api.network"
     healthcheck:
-      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list"]
+      # plain TCP check: kafka-topics.sh would spawn a JVM that inherits
+      # KAFKA_OPTS and collides with the JMX exporter's port below
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9092'"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 30s
     environment:
-      KAFKA_CREATE_TOPICS: "events:1:1" # topic:partition:replicas
+      # topic already exists on the persisted volume; leaving
+      # KAFKA_CREATE_TOPICS set spawns a kafka-topics.sh JVM at boot that
+      # inherits KAFKA_OPTS and collides with the JMX exporter's port below
       KAFKA_ADVERTISED_HOST_NAME: kafka # docker-machine ip
       KAFKA_LISTENERS: INSIDE://:29092,OUTSIDE://:9092
       KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
@@ -36,9 +41,12 @@ services:
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_LOG_DIRS: /kafka/kafka-logs
       KAFKA_BROKER_ID: 1
+      KAFKA_OPTS: "-javaagent:/opt/jmx-exporter/jmx_prometheus_javaagent.jar=7071:/opt/jmx-exporter/kafka-jmx-exporter.yml"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./kafka:/kafka/kafka-logs
+      - ./kafka-jmx-exporter/jmx_prometheus_javaagent.jar:/opt/jmx-exporter/jmx_prometheus_javaagent.jar:ro
+      - ./kafka-jmx-exporter/kafka-jmx-exporter.yml:/opt/jmx-exporter/kafka-jmx-exporter.yml:ro
     depends_on:
     - "zookeeper"
   db:
@@ -218,6 +226,7 @@ services:
       - check
       - cadvisor
       - mysqld-exporter
+      - kafka
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.47.2
     ports:

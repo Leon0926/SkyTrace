@@ -10,3 +10,4 @@ deployment/kafka/
 *.log
 data.json
 logs/
+*.jar
