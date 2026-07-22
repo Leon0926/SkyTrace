@@ -11,8 +11,10 @@ services:
       - "./zookeeper/data:/opt/zookeeper-3.4.13/data"
     hostname: zookeeper
   kafka:
-    image: wurstmeister/kafka
+    image: kafka-jmx-exporter
     platform: linux/amd64
+    build:
+      context: ./kafka-jmx-exporter
     restart: always
     command: [start-kafka.sh]
     ports:
@@ -45,8 +47,6 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./kafka:/kafka/kafka-logs
-      - ./kafka-jmx-exporter/jmx_prometheus_javaagent.jar:/opt/jmx-exporter/jmx_prometheus_javaagent.jar:ro
-      - ./kafka-jmx-exporter/kafka-jmx-exporter.yml:/opt/jmx-exporter/kafka-jmx-exporter.yml:ro
     depends_on:
     - "zookeeper"
   db:
