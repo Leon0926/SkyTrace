@@ -250,12 +250,25 @@ services:
       - api.network
     depends_on:
       - db
+  grafana:
+    image: grafana/grafana:11.2.0
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - api.network
+    depends_on:
+      - prometheus
 
 volumes:
   my-db:
   processing-db:
   check-data:
   anomaly-data:
+  grafana-data:
 
 networks:
   api.network:
