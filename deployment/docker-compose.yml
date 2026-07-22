@@ -141,8 +141,6 @@ services:
       context: ../analyzer
   dashboard:
     image: dashboard
-    ports:
-      - "3000:3000"
     networks:
       - "api.network"
     depends_on:
