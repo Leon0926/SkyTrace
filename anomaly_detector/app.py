@@ -10,6 +10,7 @@ import os
 from threading import Thread
 from connexion.middleware import MiddlewarePosition
 from starlette.middleware.cors import CORSMiddleware
+from prometheus_flask_exporter import PrometheusMetrics
 
 if "TARGET_ENV" in os.environ and os.environ["TARGET_ENV"] == "test":
     print("In Test Environment")
@@ -145,6 +146,7 @@ def get_anomalies(anomaly_type=None):
     return anomalies, 200
 
 app = connexion.FlaskApp(__name__, specification_dir='')
+metrics = PrometheusMetrics(app.app)
 app.add_api("lli249-Aircraft-Readings-1.0.0-resolved.yaml",base_path='/anomaly_detector', strict_validation=True, validate_responses=True)
 
 app.add_middleware(

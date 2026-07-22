@@ -211,6 +211,11 @@ services:
       - api.network
     depends_on:
       - receiver
+      - storage
+      - processing
+      - analyzer
+      - anomaly_detector
+      - check
 
 volumes:
   my-db:

@@ -10,6 +10,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from connexion import FlaskApp
 from connexion.middleware import MiddlewarePosition
 from starlette.middleware.cors import CORSMiddleware
+from prometheus_flask_exporter import PrometheusMetrics
 
 if "TARGET_ENV" in os.environ and os.environ["TARGET_ENV"] == "test":
     print("In Test Environment")
@@ -128,6 +129,7 @@ def get_checks():
         return {"message": "Status file not found"}, 404
 
 app = connexion.FlaskApp(__name__, specification_dir='')
+metrics = PrometheusMetrics(app.app)
 app.add_api("openapi.yml",base_path="/check", strict_validation=True, validate_responses=True)
 
 app.add_middleware(

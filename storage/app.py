@@ -11,6 +11,7 @@ from pykafka import KafkaClient
 from pykafka.common import OffsetType
 from threading import Thread, Lock
 import os
+from prometheus_flask_exporter import PrometheusMetrics
 
 if "TARGET_ENV" in os.environ and os.environ["TARGET_ENV"] == "test":
     print("In Test Environment")
@@ -183,7 +184,8 @@ def get_event_stats():
     return stats, 200
 
 app = connexion.FlaskApp(__name__, specification_dir='')
-app.add_api("lli249-Aircraft-Readings-1.0.0-resolved.yaml", 
+metrics = PrometheusMetrics(app.app)
+app.add_api("lli249-Aircraft-Readings-1.0.0-resolved.yaml",
             base_path="/storage",
             strict_validation=True, 
             validate_responses=True)

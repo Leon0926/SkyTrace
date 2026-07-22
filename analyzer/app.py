@@ -11,6 +11,7 @@ from flask_cors import CORS
 from connexion.middleware import MiddlewarePosition
 from starlette.middleware.cors import CORSMiddleware
 from contextlib import contextmanager
+from prometheus_flask_exporter import PrometheusMetrics
 import os
 
 @contextmanager
@@ -193,6 +194,7 @@ logger.info("App Conf File: %s" % app_conf_file)
 logger.info("Log Conf File: %s" % log_conf_file)
 
 app = connexion.FlaskApp(__name__, specification_dir='')
+metrics = PrometheusMetrics(app.app)
 app.add_api("lli249-Aircraft_readings-1.0.0-resolved.yaml",
             base_path="/analyzer",
             strict_validation=True,

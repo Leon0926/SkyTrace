@@ -10,6 +10,7 @@ import os
 from flask_cors import CORS
 from connexion.middleware import MiddlewarePosition
 from starlette.middleware.cors import CORSMiddleware
+from prometheus_flask_exporter import PrometheusMetrics
 
 def get_stats():
     """ Get the current statistics of aircraft readings """
@@ -142,8 +143,9 @@ logger.info("Log Conf File: %s" % log_conf_file)
 default_start_time = app_config['scheduler']['default_start_time']
 
 app = connexion.FlaskApp(__name__, specification_dir='')
+metrics = PrometheusMetrics(app.app)
 app.add_api("lli249-Aircraft-Readings-1.0.0-resolved.yaml",
-            base_path="/processing", 
+            base_path="/processing",
             strict_validation=True, 
             validate_responses=True)
 

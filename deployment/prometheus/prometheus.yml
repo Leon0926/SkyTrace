@@ -5,3 +5,18 @@ scrape_configs:
   - job_name: receiver
     static_configs:
       - targets: ["receiver:8080"]
+  - job_name: storage
+    static_configs:
+      - targets: ["storage:8090"]
+  - job_name: processing
+    static_configs:
+      - targets: ["processing:8100"]
+  - job_name: analyzer
+    static_configs:
+      - targets: ["analyzer:8110"]
+  - job_name: anomaly_detector
+    static_configs:
+      - targets: ["anomaly_detector:8120"]
+  - job_name: check
+    static_configs:
+      - targets: ["check:8130"]
