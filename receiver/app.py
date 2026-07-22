@@ -9,6 +9,7 @@ import logging.config, logging
 import uuid
 from pykafka import KafkaClient
 import time
+from prometheus_flask_exporter import PrometheusMetrics
 
 if "TARGET_ENV" in os.environ and os.environ["TARGET_ENV"] == "test":
     print("In Test Environment")
@@ -97,6 +98,7 @@ def produce_message(msg_str, max_retries=3):
     raise Exception("Could not produce message after max retries")
 
 app = connexion.FlaskApp(__name__, specification_dir='')
+metrics = PrometheusMetrics(app.app)
 app.add_api("lli249-Aircraft-Readings-1.0.0-resolved.yaml",
             base_path="/receiver",
             strict_validation=True,

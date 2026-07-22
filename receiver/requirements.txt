@@ -6,3 +6,4 @@ Flask==3.0.3
 connexion[Flask]
 connexion[uvicorn]
 setuptools==79.0.1
+prometheus-flask-exporter==0.23.2

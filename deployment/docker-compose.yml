@@ -201,6 +201,16 @@ services:
       - TARGET_ENV=test
     build:
       context: ../anomaly_detector
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    networks:
+      - api.network
+    depends_on:
+      - receiver
 
 volumes:
   my-db:
