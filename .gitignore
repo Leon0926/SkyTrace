@@ -1,4 +1,5 @@
 .env
+deployment/mysqld-exporter/.my.cnf
 venv
 dashboard-ui/node_modules/
 deployment/zookeeper/
