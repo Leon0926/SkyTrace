@@ -23,6 +23,10 @@ services:
     hostname: kafka
     networks:
     - "api.network"
+    # give the JVM time to cleanly close its zookeeper session on shutdown;
+    # otherwise the broker's ephemeral znode lingers and the next `up`
+    # fails to register broker.id until the stale session times out
+    stop_grace_period: 60s
     healthcheck:
       # plain TCP check: kafka-topics.sh would spawn a JVM that inherits
       # KAFKA_OPTS and collides with the JMX exporter's port below
@@ -228,16 +232,29 @@ services:
       - mysqld-exporter
       - kafka
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.47.2
+    image: gcr.io/cadvisor/cadvisor:v0.52.1
+    # Docker Desktop's /var/run/docker.sock is a restricted API proxy that
+    # cadvisor's Docker client can't validate ("Error response from
+    # daemon"), and its default containerd-snapshotter storage layout
+    # breaks cadvisor's legacy Docker factory (can't locate a container's
+    # read-write layer) even on versions where the API call itself works.
+    # Talking to containerd directly sidesteps both: it's also the same
+    # socket/namespace dockerd uses under the hood on real Linux hosts.
+    command:
+      - "--store_container_labels=true"
+      - "--containerd=/host-containerd.sock"
+      - "--containerd-namespace=moby"
     ports:
       - "8081:8080"
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
+      - /run/containerd/containerd.sock:/host-containerd.sock:ro
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
     networks:
       - api.network
+    privileged: true
   mysqld-exporter:
     image: prom/mysqld-exporter:latest
     command:
@@ -258,10 +275,22 @@ services:
     volumes:
       - grafana-data:/var/lib/grafana
       - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
     networks:
       - api.network
     depends_on:
       - prometheus
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:latest
+    command: ["--kafka.server=kafka:9092"]
+    ports:
+      - "9308:9308"
+    networks:
+      - api.network
+    depends_on:
+      - kafka
+
 
 volumes:
   my-db:
