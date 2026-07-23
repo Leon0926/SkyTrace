@@ -101,58 +101,61 @@ def process_messages():
                                          auto_offset_reset=OffsetType.EARLIEST)
     for msg in consumer:
         msg_str = msg.value.decode('utf-8')
-        msg = json.loads(msg_str)
-        logger.info("Message: %s" % msg)
-        payload = msg["payload"]
-        if msg["type"] == "location_reading": 
-            session = Session()
-            try:
-                existing_event = session.query(AircraftLocation).filter(
-                    AircraftLocation.trace_id == payload["trace_id"]
-                ).first()
-                if existing_event:
-                    logger.info('Duplicate event %s with trace id %s skipped', msg["type"], payload["trace_id"])
-                else:
-                    new_location_event = AircraftLocation(
-                        flight_id=payload["flight_id"],
-                        latitude=payload["latitude"],
-                        longitude=payload["longitude"],
-                        altitude=payload["altitude"],
-                        timestamp=datetime.fromisoformat(payload["timestamp"]),
-                        date_created=datetime.now(),
-                        trace_id=payload["trace_id"]
-                    )
-                    session.add(new_location_event)
-                    session.commit()
-                    logger.info(f'Stored event {msg["type"]} request with a trace id of {payload["trace_id"]}')
-            finally:
-                session.close()
+        try:
+            msg = json.loads(msg_str)
+            logger.info("Message: %s" % msg)
+            payload = msg["payload"]
+            if msg["type"] == "location_reading":
+                session = Session()
+                try:
+                    existing_event = session.query(AircraftLocation).filter(
+                        AircraftLocation.trace_id == payload["trace_id"]
+                    ).first()
+                    if existing_event:
+                        logger.info('Duplicate event %s with trace id %s skipped', msg["type"], payload["trace_id"])
+                    else:
+                        new_location_event = AircraftLocation(
+                            flight_id=payload["flight_id"],
+                            latitude=payload["latitude"],
+                            longitude=payload["longitude"],
+                            altitude=payload["altitude"],
+                            timestamp=datetime.fromisoformat(payload["timestamp"]),
+                            date_created=datetime.now(),
+                            trace_id=payload["trace_id"]
+                        )
+                        session.add(new_location_event)
+                        session.commit()
+                        logger.info(f'Stored event {msg["type"]} request with a trace id of {payload["trace_id"]}')
+                finally:
+                    session.close()
 
-        elif msg["type"] == "time_until_arrival_reading":
-            session = Session()
-            try:
-                existing_event = session.query(ArrivalTime).filter(
-                    ArrivalTime.trace_id == payload["trace_id"]
-                ).first()
-                if existing_event:
-                    logger.info('Duplicate event %s with trace id %s skipped', msg["type"], payload["trace_id"])
-                else:
-                    new_arrival_event = ArrivalTime(
-                        flight_id=payload["flight_id"],
-                        estimated_arrival_time=payload["estimated_arrival_time"],
-                        actual_arrival_time=payload["actual_arrival_time"],
-                        time_difference_in_ms=payload["time_difference_in_ms"],
-                        timestamp=datetime.fromisoformat(payload["timestamp"]),
-                        date_created=datetime.now(),
-                        trace_id=payload["trace_id"]
-                    )
-                    session.add(new_arrival_event)
-                    session.commit()
-                    logger.info(f'Stored event {msg["type"]} request with a trace id of {payload["trace_id"]}')
-            finally:
-                session.close()
-
-        consumer.commit_offsets()
+            elif msg["type"] == "time_until_arrival_reading":
+                session = Session()
+                try:
+                    existing_event = session.query(ArrivalTime).filter(
+                        ArrivalTime.trace_id == payload["trace_id"]
+                    ).first()
+                    if existing_event:
+                        logger.info('Duplicate event %s with trace id %s skipped', msg["type"], payload["trace_id"])
+                    else:
+                        new_arrival_event = ArrivalTime(
+                            flight_id=payload["flight_id"],
+                            estimated_arrival_time=payload["estimated_arrival_time"],
+                            actual_arrival_time=payload["actual_arrival_time"],
+                            time_difference_in_ms=payload["time_difference_in_ms"],
+                            timestamp=datetime.fromisoformat(payload["timestamp"]),
+                            date_created=datetime.now(),
+                            trace_id=payload["trace_id"]
+                        )
+                        session.add(new_arrival_event)
+                        session.commit()
+                        logger.info(f'Stored event {msg["type"]} request with a trace id of {payload["trace_id"]}')
+                finally:
+                    session.close()
+        except Exception:
+            logger.error("Failed to process message, skipping: %s", msg_str, exc_info=True)
+        finally:
+            consumer.commit_offsets()
 
 def start_consumer():
     """Start the Kafka consumer once for this process."""
