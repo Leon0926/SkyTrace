@@ -11,6 +11,7 @@ from pykafka import KafkaClient
 from pykafka.common import OffsetType
 from threading import Thread, Lock
 import os
+import time
 from prometheus_flask_exporter import PrometheusMetrics
 
 if "TARGET_ENV" in os.environ and os.environ["TARGET_ENV"] == "test":
@@ -48,6 +49,7 @@ DB_ENGINE = create_engine(f'mysql+pymysql://{user}:{password}@{hostname}:{port}/
 Session = sessionmaker(bind=DB_ENGINE)
 consumer_thread = None
 consumer_lock = Lock()
+KAFKA_RECONNECT_DELAY_SECONDS = 5
 
 def get_aircraft_location(start_timestamp, end_timestamp):
     """ Get aircraft location readings between start and end timestamps filtered by date_created """
@@ -92,8 +94,16 @@ def process_messages():
     
     hostname = "%s:%d" % (app_config["events"]["hostname"],
                           app_config["events"]["port"])
-        
-    client = KafkaClient(hosts=hostname)
+
+    client = None
+    while client is None:
+        try:
+            client = KafkaClient(hosts=hostname)
+        except Exception:
+            logger.error("Could not connect to Kafka at %s, retrying in %ds",
+                         hostname, KAFKA_RECONNECT_DELAY_SECONDS, exc_info=True)
+            time.sleep(KAFKA_RECONNECT_DELAY_SECONDS)
+
     topic = client.topics[str.encode(app_config["events"]["topic"])]
     logger.info(f"Connected to topic: {app_config['events']['topic']}")
     consumer = topic.get_simple_consumer(consumer_group=b'event_group',
@@ -157,6 +167,18 @@ def process_messages():
         finally:
             consumer.commit_offsets()
 
+def _consumer_loop():
+    """Run process_messages() forever, restarting it if it ever exits or raises."""
+    while True:
+        try:
+            process_messages()
+            logger.error("Kafka consumer exited unexpectedly, restarting in %ds",
+                         KAFKA_RECONNECT_DELAY_SECONDS)
+        except Exception:
+            logger.error("Kafka consumer crashed, restarting in %ds",
+                         KAFKA_RECONNECT_DELAY_SECONDS, exc_info=True)
+        time.sleep(KAFKA_RECONNECT_DELAY_SECONDS)
+
 def start_consumer():
     """Start the Kafka consumer once for this process."""
     global consumer_thread
@@ -165,7 +187,7 @@ def start_consumer():
             logger.info("Kafka consumer thread already running")
             return
 
-        consumer_thread = Thread(target=process_messages)
+        consumer_thread = Thread(target=_consumer_loop)
         consumer_thread.daemon = True
         consumer_thread.start()
         logger.info("Kafka consumer thread started")
