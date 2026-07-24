@@ -62,12 +62,12 @@ export const options = {
   },
 };
 
-function uuid4() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
+// Fixed-prefix UUID + a small zero-padded numeric suffix (1-200),
+// matching the real traffic pattern: a fleet of ~200 aircraft that each
+// send many readings, rather than a fresh random UUID per message.
+function flightId() {
+  const n = Math.floor(randRange(1, 201));
+  return `d290f1ee-6c54-4b01-90e6-d70174${String(n).padStart(6, '0')}`;
 }
 
 function nowNs() {
@@ -77,8 +77,14 @@ function nowNs() {
   return BigInt(Date.now()) * 1000000n;
 }
 
-function isoNow() {
-  return new Date().toISOString();
+// storage/app.py parses "timestamp" with Python's datetime.fromisoformat(),
+// and storage's Docker image runs Ubuntu 22.04 -> Python 3.10, whose
+// fromisoformat() cannot parse a trailing "Z" (only Python 3.11+ can) --
+// it needs an explicit numeric UTC offset. JS's toISOString() emits "Z",
+// so swap it for "+00:00" and pad millisecond precision to microseconds
+// to match real traffic's format, e.g. "2024-08-29T09:12:33.001000+00:00".
+function isoOffset(date) {
+  return date.toISOString().slice(0, -1) + '000+00:00';
 }
 
 function randRange(min, max) {
@@ -93,26 +99,29 @@ function randRange(min, max) {
 // Values here intentionally never breach [0, 45000].
 function locationReadingBody() {
   return {
-    flight_id: uuid4(),
+    flight_id: flightId(),
     latitude: randRange(-90, 90),
     longitude: randRange(-180, 180),
     altitude: randRange(500, 42000),
-    timestamp: isoNow(),
+    timestamp: isoOffset(new Date()),
     _lt_sent_ns: nowNs().toString(),
   };
 }
 
 // time_difference_in_ms kept well inside [-300000, 300000] for the same
-// reason as altitude above.
+// reason as altitude above. date_created mirrors real traffic's payload
+// shape; storage ignores it (it stamps its own date_created server-side).
 function timeUntilArrivalBody() {
-  const eta = new Date(Date.now() + randRange(5 * 60000, 4 * 3600000));
+  const now = new Date();
+  const eta = new Date(now.getTime() + randRange(5 * 60000, 4 * 3600000));
   const actual = new Date(eta.getTime() + randRange(-120000, 120000));
   return {
-    flight_id: uuid4(),
-    estimated_arrival_time: eta.toISOString(),
-    actual_arrival_time: actual.toISOString(),
-    timestamp: isoNow(),
+    flight_id: flightId(),
+    estimated_arrival_time: isoOffset(eta),
+    actual_arrival_time: isoOffset(actual),
+    timestamp: isoOffset(now),
     time_difference_in_ms: Math.round(randRange(-250000, 250000)),
+    date_created: isoOffset(now),
     _lt_sent_ns: nowNs().toString(),
   };
 }

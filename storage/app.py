@@ -13,7 +13,7 @@ from threading import Thread, Lock
 import os
 import time
 from prometheus_flask_exporter import PrometheusMetrics
-from prometheus_client import Histogram, Counter
+from prometheus_client import Histogram, Counter, REGISTRY
 
 if "TARGET_ENV" in os.environ and os.environ["TARGET_ENV"] == "test":
     print("In Test Environment")
@@ -45,13 +45,32 @@ E2E_LATENCY_BUCKETS = (
     0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75,
     1, 2.5, 5, 7.5, 10, 15, 20, 30,
 )
-skytrace_e2e_latency_seconds = Histogram(
-    'skytrace_e2e_latency_seconds',
+
+
+def _get_or_register(collector_cls, name, documentation, **kwargs):
+    # connexion resolves each operationId (e.g. "app.get_aircraft_location")
+    # by importing this file a second time under the module name "app",
+    # separate from the __main__ execution that actually runs app.py and
+    # starts the Kafka consumer thread. That reimport re-executes this
+    # whole module, including this block, and prometheus_client's default
+    # registry is a process-wide singleton -- so the second registration
+    # attempt for the same metric name raises ValueError. Reuse the
+    # already-registered collector instead of crashing, the same way
+    # prometheus_flask_exporter defends against this (see its
+    # export_defaults(), which catches ValueError on a re-registration).
+    try:
+        return collector_cls(name, documentation, **kwargs)
+    except ValueError:
+        return REGISTRY._names_to_collectors[name]
+
+
+skytrace_e2e_latency_seconds = _get_or_register(
+    Histogram, 'skytrace_e2e_latency_seconds',
     'End-to-end latency from producer send to durable storage in MySQL',
     buckets=E2E_LATENCY_BUCKETS,
 )
-skytrace_dead_letter_total = Counter(
-    'skytrace_dead_letter_total',
+skytrace_dead_letter_total = _get_or_register(
+    Counter, 'skytrace_dead_letter_total',
     'Kafka event messages that failed processing and were skipped (offset still committed)',
 )
 
