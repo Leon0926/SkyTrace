@@ -20,7 +20,9 @@ whole body through into the Kafka payload unmodified — so it survives the
 hop through Kafka for free. `storage/app.py` reads it back out at the
 point a message is durably written to MySQL and observes
 `now - sent_time` into a new histogram, `skytrace_e2e_latency_seconds`
-(buckets from 10ms to 30s), exposed on storage's existing `/metrics`. A
+(buckets from 10ms to 5m — wide enough to still resolve the tail once
+`storage` starts backlogging under saturation, not just the happy path),
+exposed on storage's existing `/metrics`. A
 message without the field is completely unaffected — the hook is a no-op.
 
 The measurement point is **storage**, not `anomaly_detector`, even though
@@ -55,6 +57,13 @@ curl -s http://localhost:8080/receiver/check
 
 ## 1. Run the generator
 
+For a quick smoke test against a local stack, no flags needed — the
+script defaults to a low, short run (20 req/s, 10s ramp, 30s hold):
+```
+k6 run scripts/loadtest/generate_telemetry.js
+```
+
+For an actual sustained-throughput run, override the defaults:
 ```
 k6 run scripts/loadtest/generate_telemetry.js \
     -e BASE_URL=http://localhost:8080 \
@@ -134,7 +143,13 @@ sum(kafka_consumergroup_lag{consumergroup="anomaly_group"})
 ## Notes / caveats
 
 - `_lt_sent_ns` carries millisecond resolution (JS `Date.now()`, padded to
-  ns) — negligible against the 10ms–30s range the histogram targets.
+  ns) — negligible against the 10ms–5m range the histogram targets.
+- If p50/p95/p99 all report the exact same value, that's a clipped
+  quantile, not real data: it means the true latency for that quantile
+  is above the histogram's top bucket boundary, so it and everything
+  above it collapsed into `+Inf` and `histogram_quantile` reports the
+  boundary itself as a floor estimate. Widen `E2E_LATENCY_BUCKETS` in
+  `storage/app.py` if you see this.
 - The e2e histogram only observes messages that are *successfully* stored.
   Dead-lettered messages are counted separately (`skytrace_dead_letter_total`)
   and won't appear in the latency distribution — a run with rising

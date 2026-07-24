@@ -14,16 +14,21 @@
 // histogram. See storage/app.py and scripts/loadtest/README.md.
 //
 // Usage:
+//   k6 run scripts/loadtest/generate_telemetry.js
+//       # runs the quick-smoke-test defaults below, no flags needed
 //   k6 run scripts/loadtest/generate_telemetry.js \
 //       -e RATE=500 -e DURATION=5m -e RAMP_TIME=30s -e BASE_URL=http://localhost:8080
+//       # override any of them for a real run
 //
-// Env vars (all optional, defaults shown):
+// Env vars (all optional; defaults below are a quick, low-risk smoke test
+// against a stack on localhost -- bump RATE/RAMP_TIME/DURATION for an
+// actual sustained-throughput run, see scripts/loadtest/README.md):
 //   BASE_URL   http://localhost:8080   receiver base URL (no trailing slash)
-//   RATE       100                     target sustained requests/sec
-//   RAMP_TIME  30s                     time to ramp from 0 to RATE
-//   DURATION   2m                      time to hold steady at RATE
-//   PRE_VUS    50                      VUs pre-allocated for the ramp
-//   MAX_VUS    (RATE * 2, min 100)     hard cap on VUs k6 may spawn
+//   RATE       20                      target sustained requests/sec
+//   RAMP_TIME  10s                     time to ramp from 0 to RATE
+//   DURATION   30s                     time to hold steady at RATE
+//   PRE_VUS    20                      VUs pre-allocated for the ramp
+//   MAX_VUS    (RATE * 2, min 50)      hard cap on VUs k6 may spawn
 //   ARRIVAL_MIX 0.8                    fraction of requests that are
 //                                      location readings vs time-until-arrival
 
@@ -32,11 +37,11 @@ import { check } from 'k6';
 import { Counter } from 'k6/metrics';
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
-const RATE = parseInt(__ENV.RATE || '100', 10);
-const RAMP_TIME = __ENV.RAMP_TIME || '30s';
-const DURATION = __ENV.DURATION || '2m';
-const PRE_VUS = parseInt(__ENV.PRE_VUS || '50', 10);
-const MAX_VUS = parseInt(__ENV.MAX_VUS || String(Math.max(RATE * 2, 100)), 10);
+const RATE = parseInt(__ENV.RATE || '20', 10);
+const RAMP_TIME = __ENV.RAMP_TIME || '10s';
+const DURATION = __ENV.DURATION || '30s';
+const PRE_VUS = parseInt(__ENV.PRE_VUS || '20', 10);
+const MAX_VUS = parseInt(__ENV.MAX_VUS || String(Math.max(RATE * 2, 50)), 10);
 const ARRIVAL_MIX = parseFloat(__ENV.ARRIVAL_MIX || '0.8');
 
 const httpErrors = new Counter('lt_http_errors');

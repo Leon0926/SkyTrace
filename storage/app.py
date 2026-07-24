@@ -41,9 +41,14 @@ logger.info("Log Conf File: %s" % log_conf_file)
 # "_lt_sent_ns" (epoch nanoseconds), we record end-to-end pipeline latency
 # here at the point a message is durably stored. Messages without the
 # field are unaffected (no schema/behavior change). See scripts/loadtest/.
+# Buckets go up to 5m: under saturation, backlogged messages can sit in
+# Kafka well past 30s waiting for storage to catch up, and a quantile that
+# clips at the top bucket boundary (everything above it collapses into
+# +Inf and reports as exactly that boundary) hides how bad the tail
+# actually gets.
 E2E_LATENCY_BUCKETS = (
     0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75,
-    1, 2.5, 5, 7.5, 10, 15, 20, 30,
+    1, 2.5, 5, 7.5, 10, 15, 20, 30, 45, 60, 90, 120, 180, 300,
 )
 
 
