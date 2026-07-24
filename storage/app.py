@@ -13,6 +13,7 @@ from threading import Thread, Lock
 import os
 import time
 from prometheus_flask_exporter import PrometheusMetrics
+from prometheus_client import Histogram, Counter
 
 if "TARGET_ENV" in os.environ and os.environ["TARGET_ENV"] == "test":
     print("In Test Environment")
@@ -34,6 +35,38 @@ logger = logging.getLogger('basicLogger')
 
 logger.info("App Conf File: %s" % app_conf_file)
 logger.info("Log Conf File: %s" % log_conf_file)
+
+# --- Load test instrumentation -----------------------------------------
+# Optional, non-invasive hook: if a producer stamps a message with
+# "_lt_sent_ns" (epoch nanoseconds), we record end-to-end pipeline latency
+# here at the point a message is durably stored. Messages without the
+# field are unaffected (no schema/behavior change). See scripts/loadtest/.
+E2E_LATENCY_BUCKETS = (
+    0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75,
+    1, 2.5, 5, 7.5, 10, 15, 20, 30,
+)
+skytrace_e2e_latency_seconds = Histogram(
+    'skytrace_e2e_latency_seconds',
+    'End-to-end latency from producer send to durable storage in MySQL',
+    buckets=E2E_LATENCY_BUCKETS,
+)
+skytrace_dead_letter_total = Counter(
+    'skytrace_dead_letter_total',
+    'Kafka event messages that failed processing and were skipped (offset still committed)',
+)
+
+
+def _observe_e2e_latency(payload):
+    sent_ns = payload.get("_lt_sent_ns")
+    if sent_ns is None:
+        return
+    try:
+        latency = time.time() - (float(sent_ns) / 1e9)
+    except (TypeError, ValueError):
+        return
+    if latency >= 0:
+        skytrace_e2e_latency_seconds.observe(latency)
+# -------------------------------------------------------------------------
 
 user = os.environ.get('MYSQL_USER')
 password = os.environ.get('MYSQL_PASSWORD')
@@ -136,6 +169,7 @@ def process_messages():
                         session.add(new_location_event)
                         session.commit()
                         logger.info(f'Stored event {msg["type"]} request with a trace id of {payload["trace_id"]}')
+                        _observe_e2e_latency(payload)
                 finally:
                     session.close()
 
@@ -160,10 +194,12 @@ def process_messages():
                         session.add(new_arrival_event)
                         session.commit()
                         logger.info(f'Stored event {msg["type"]} request with a trace id of {payload["trace_id"]}')
+                        _observe_e2e_latency(payload)
                 finally:
                     session.close()
         except Exception:
             logger.error("Failed to process message, skipping: %s", msg_str, exc_info=True)
+            skytrace_dead_letter_total.inc()
         finally:
             consumer.commit_offsets()
 
