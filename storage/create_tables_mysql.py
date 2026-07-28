@@ -11,7 +11,8 @@ altitude FLOAT NOT NULL,
 timestamp VARCHAR(100) NOT NULL,
 trace_id VARCHAR(100) NOT NULL,
 date_created VARCHAR(100) NOT NULL,
-CONSTRAINT aircraft_location_pk PRIMARY KEY (id))
+CONSTRAINT aircraft_location_pk PRIMARY KEY (id),
+CONSTRAINT aircraft_location_trace_id_uk UNIQUE (trace_id))
 ''')
 db_cursor.execute('''
 CREATE TABLE aircraft_time_until_arrival
@@ -23,7 +24,8 @@ time_difference_in_ms INTEGER NOT NULL,
 timestamp VARCHAR(100) NOT NULL,
 date_created VARCHAR(100) NOT NULL,
 trace_id VARCHAR(100) NOT NULL,
-CONSTRAINT aircraft_time_until_arrival_pk PRIMARY KEY (id))
+CONSTRAINT aircraft_time_until_arrival_pk PRIMARY KEY (id),
+CONSTRAINT aircraft_time_until_arrival_trace_id_uk UNIQUE (trace_id))
 ''')
 db_conn.commit()
 db_conn.close()

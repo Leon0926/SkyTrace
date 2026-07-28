@@ -14,7 +14,7 @@ class AircraftLocation(Base):
     altitude = Column(Float, nullable=False)
     timestamp = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
     date_created = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
-    trace_id = Column(String, nullable=False)
+    trace_id = Column(String(100), unique=True, nullable=False, index=True)
 
     def to_dict(self):
         return {
@@ -39,7 +39,7 @@ class ArrivalTime(Base):
     time_difference_in_ms = Column(Integer, nullable=False)
     timestamp = Column(DateTime, nullable=False)
     date_created = Column(DateTime, nullable=False)
-    trace_id = Column(String, nullable=False)
+    trace_id = Column(String(100), unique=True, nullable=False, index=True)
 
     def to_dict(self):
         return {
