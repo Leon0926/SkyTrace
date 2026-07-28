@@ -2,6 +2,7 @@ import connexion
 from connexion import NoContent
 from sqlalchemy import create_engine, and_, func
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.exc import IntegrityError
 from create_database import AircraftLocation, ArrivalTime 
 from datetime import datetime
 import yaml
@@ -107,6 +108,10 @@ Session = sessionmaker(bind=DB_ENGINE)
 consumer_thread = None
 consumer_lock = Lock()
 KAFKA_RECONNECT_DELAY_SECONDS = 5
+# TODO(step 3): move these to app_conf.yml. batch_size=1 reproduces today's
+# per-message behavior exactly, which is the baseline for measurement.
+BATCH_SIZE = 50
+BATCH_FLUSH_TIMEOUT_SECONDS = 2.0
 
 def get_aircraft_location(start_timestamp, end_timestamp):
     """ Get aircraft location readings between start and end timestamps filtered by date_created """
@@ -145,10 +150,62 @@ def get_aircraft_time_until_arrival(start_timestamp, end_timestamp):
     logger.info("Query for aircraft time-until-arrival readings after %s to %s returns %d results", start_timestamp, end_timestamp, len(results_list))
     return results_list, 200
 
+def _insert_row_by_row(session, model_cls, to_insert):
+    """Retry a failed batch commit one row at a time so only the actual
+    conflicting row(s) get dropped, not the whole batch."""
+    stored = []
+    for payload, kwargs in to_insert:
+        session.add(model_cls(**kwargs))
+        try:
+            session.commit()
+            stored.append((payload, kwargs))
+        except IntegrityError:
+            session.rollback()
+            logger.info('Duplicate trace_id %s hit during row-by-row retry, skipped',
+                        kwargs["trace_id"])
+    return stored
+
+
+def _flush_batch(model_cls, pending, kind_label):
+    """ Insert every row in `pending` that isn't already stored, in one
+        transaction. `pending` is a list of (payload, kwargs) tuples. """
+    if not pending:
+        return
+
+    trace_ids = [kwargs["trace_id"] for _, kwargs in pending]
+    session = Session()
+    try:
+        existing = {row[0] for row in
+                    session.query(model_cls.trace_id)
+                           .filter(model_cls.trace_id.in_(trace_ids)).all()}
+        to_insert = [(payload, kwargs) for payload, kwargs in pending
+                     if kwargs["trace_id"] not in existing]
+        skipped = len(pending) - len(to_insert)
+        if not to_insert:
+            if skipped:
+                logger.info('Skipped %d duplicate %s event(s) already stored', skipped, kind_label)
+            return
+
+        session.add_all(model_cls(**kwargs) for _, kwargs in to_insert)
+        try:
+            session.commit()
+            stored = to_insert
+        except IntegrityError:
+            session.rollback()
+            stored = _insert_row_by_row(session, model_cls, to_insert)
+
+        for payload, _ in stored:
+            _observe_e2e_latency(payload)
+        logger.info('Stored %d %s event(s) (%d skipped as duplicates)',
+                    len(stored), kind_label, skipped)
+    finally:
+        session.close()
+
+
 def process_messages():
-    """ Consume events from kafka and persist to MySQL DB
+    """ Consume events from kafka and persist to MySQL DB in batches
         Runs alongside connexion app as daemon thread"""
-    
+
     hostname = "%s:%d" % (app_config["events"]["hostname"],
                           app_config["events"]["port"])
 
@@ -165,67 +222,69 @@ def process_messages():
     logger.info(f"Connected to topic: {app_config['events']['topic']}")
     consumer = topic.get_simple_consumer(consumer_group=b'event_group',
                                          reset_offset_on_start=False,
-                                         auto_offset_reset=OffsetType.EARLIEST)
-    for msg in consumer:
-        msg_str = msg.value.decode('utf-8')
-        try:
-            msg = json.loads(msg_str)
-            logger.info("Message: %s" % msg)
-            payload = msg["payload"]
-            if msg["type"] == "location_reading":
-                session = Session()
-                try:
-                    existing_event = session.query(AircraftLocation).filter(
-                        AircraftLocation.trace_id == payload["trace_id"]
-                    ).first()
-                    if existing_event:
-                        logger.info('Duplicate event %s with trace id %s skipped', msg["type"], payload["trace_id"])
-                    else:
-                        new_location_event = AircraftLocation(
-                            flight_id=payload["flight_id"],
-                            latitude=payload["latitude"],
-                            longitude=payload["longitude"],
-                            altitude=payload["altitude"],
-                            timestamp=datetime.fromisoformat(payload["timestamp"]),
-                            date_created=datetime.now(),
-                            trace_id=payload["trace_id"]
-                        )
-                        session.add(new_location_event)
-                        session.commit()
-                        logger.info(f'Stored event {msg["type"]} request with a trace id of {payload["trace_id"]}')
-                        _observe_e2e_latency(payload)
-                finally:
-                    session.close()
+                                         auto_offset_reset=OffsetType.EARLIEST,
+                                         consumer_timeout_ms=1000)
 
-            elif msg["type"] == "time_until_arrival_reading":
-                session = Session()
-                try:
-                    existing_event = session.query(ArrivalTime).filter(
-                        ArrivalTime.trace_id == payload["trace_id"]
-                    ).first()
-                    if existing_event:
-                        logger.info('Duplicate event %s with trace id %s skipped', msg["type"], payload["trace_id"])
-                    else:
-                        new_arrival_event = ArrivalTime(
-                            flight_id=payload["flight_id"],
-                            estimated_arrival_time=payload["estimated_arrival_time"],
-                            actual_arrival_time=payload["actual_arrival_time"],
-                            time_difference_in_ms=payload["time_difference_in_ms"],
-                            timestamp=datetime.fromisoformat(payload["timestamp"]),
-                            date_created=datetime.now(),
-                            trace_id=payload["trace_id"]
-                        )
-                        session.add(new_arrival_event)
-                        session.commit()
-                        logger.info(f'Stored event {msg["type"]} request with a trace id of {payload["trace_id"]}')
-                        _observe_e2e_latency(payload)
-                finally:
-                    session.close()
-        except Exception:
-            logger.error("Failed to process message, skipping: %s", msg_str, exc_info=True)
-            skytrace_dead_letter_total.inc()
-        finally:
-            consumer.commit_offsets()
+    pending_locations = []
+    pending_arrivals = []
+    batch_start_time = time.time()
+
+    def flush_if_needed():
+        nonlocal batch_start_time
+        total_pending = len(pending_locations) + len(pending_arrivals)
+        if total_pending == 0:
+            return
+        elapsed = time.time() - batch_start_time
+        if total_pending < BATCH_SIZE and elapsed < BATCH_FLUSH_TIMEOUT_SECONDS:
+            return
+
+        _flush_batch(AircraftLocation, pending_locations, "location_reading")
+        _flush_batch(ArrivalTime, pending_arrivals, "time_until_arrival_reading")
+        consumer.commit_offsets()
+        pending_locations.clear()
+        pending_arrivals.clear()
+        batch_start_time = time.time()
+
+    while True:
+        for msg in consumer:
+            msg_str = msg.value.decode('utf-8')
+            try:
+                parsed = json.loads(msg_str)
+                payload = parsed["payload"]
+
+                if not pending_locations and not pending_arrivals:
+                    batch_start_time = time.time()
+
+                if parsed["type"] == "location_reading":
+                    pending_locations.append((payload, dict(
+                        flight_id=payload["flight_id"],
+                        latitude=payload["latitude"],
+                        longitude=payload["longitude"],
+                        altitude=payload["altitude"],
+                        timestamp=datetime.fromisoformat(payload["timestamp"]),
+                        date_created=datetime.now(),
+                        trace_id=payload["trace_id"]
+                    )))
+                elif parsed["type"] == "time_until_arrival_reading":
+                    pending_arrivals.append((payload, dict(
+                        flight_id=payload["flight_id"],
+                        estimated_arrival_time=payload["estimated_arrival_time"],
+                        actual_arrival_time=payload["actual_arrival_time"],
+                        time_difference_in_ms=payload["time_difference_in_ms"],
+                        timestamp=datetime.fromisoformat(payload["timestamp"]),
+                        date_created=datetime.now(),
+                        trace_id=payload["trace_id"]
+                    )))
+            except Exception:
+                logger.error("Failed to process message, skipping: %s", msg_str, exc_info=True)
+                skytrace_dead_letter_total.inc()
+                continue
+
+            flush_if_needed()
+
+        # consumer_timeout_ms fired (idle) -- still need to check the timeout trigger
+        # so a half-full batch under low traffic doesn't sit forever.
+        flush_if_needed()
 
 def _consumer_loop():
     """Run process_messages() forever, restarting it if it ever exits or raises."""
