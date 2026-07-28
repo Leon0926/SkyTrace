@@ -8,3 +8,7 @@ events:
   hostname: kafka
   port: 9092
   topic: events
+storage:
+  batch_size: 50
+  batch_flush_timeout_seconds: 2.0
+  consumer_thread_count: 1

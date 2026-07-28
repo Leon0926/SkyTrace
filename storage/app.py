@@ -108,10 +108,10 @@ Session = sessionmaker(bind=DB_ENGINE)
 consumer_thread = None
 consumer_lock = Lock()
 KAFKA_RECONNECT_DELAY_SECONDS = 5
-# TODO(step 3): move these to app_conf.yml. batch_size=1 reproduces today's
-# per-message behavior exactly, which is the baseline for measurement.
-BATCH_SIZE = 50
-BATCH_FLUSH_TIMEOUT_SECONDS = 2.0
+# batch_size=1 reproduces the pre-batching per-message behavior exactly,
+# which is the baseline for measurement.
+BATCH_SIZE = app_config.get('storage', {}).get('batch_size', 1)
+BATCH_FLUSH_TIMEOUT_SECONDS = app_config.get('storage', {}).get('batch_flush_timeout_seconds', 2.0)
 
 def get_aircraft_location(start_timestamp, end_timestamp):
     """ Get aircraft location readings between start and end timestamps filtered by date_created """
