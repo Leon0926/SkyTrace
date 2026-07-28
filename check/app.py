@@ -94,7 +94,7 @@ def check_services():
         response = requests.get(ANALYZER_URL, timeout=TIMEOUT)
         if response.status_code == 200:
             analyzer_json = response.json()
-            analyzer_status = f"Analyzer has {analyzer_json['location_reading']} Location and {analyzer_json['time_until_arrival_reading']} Time_until_arrival events"
+            analyzer_status = f"Analyzer has {analyzer_json.get('location_reading', 0)} Location and {analyzer_json.get('time_until_arrival_reading', 0)} Time_until_arrival events"
             logger.info("Analyzer is Healthy")
         else:
             logger.info("Analyzer returning non-200 response")
